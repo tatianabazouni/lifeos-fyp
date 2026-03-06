@@ -24,16 +24,16 @@
     --popover: 40 25% 99%;
     --popover-foreground: 200 25% 10%;
 
-    --primary: 170 55% 30%;
+    --primary: 332 100% 39%;
     --primary-foreground: 40 30% 97%;
 
-    --secondary: 40 40% 93%;
+    --secondary: 351 85% 66%;
     --secondary-foreground: 200 25% 15%;
 
     --muted: 40 20% 94%;
     --muted-foreground: 200 10% 45%;
 
-    --accent: 35 90% 55%;
+    --accent: 22 100% 69%;
     --accent-foreground: 200 25% 10%;
 
     --destructive: 0 72% 51%;
@@ -41,7 +41,7 @@
 
     --border: 40 20% 90%;
     --input: 40 20% 90%;
-    --ring: 170 55% 30%;
+    --ring: 332 100% 39%;
 
     --radius: 0.75rem;
 
@@ -54,20 +54,20 @@
     --sidebar-border: 200 15% 16%;
     --sidebar-ring: 170 55% 45%;
 
-    --success: 145 60% 40%;
+    --success: 155 33% 41%;
     --success-foreground: 40 30% 97%;
-    --warning: 35 90% 55%;
+    --warning: 44 100% 66%;
     --warning-foreground: 200 25% 10%;
     --info: 200 80% 50%;
     --info-foreground: 40 30% 97%;
 
-    --xp: 170 55% 45%;
-    --streak: 35 90% 55%;
+    --xp: 44 100% 66%;
+    --streak: 22 100% 69%;
     --level: 260 60% 55%;
 
-    --gradient-hero: linear-gradient(135deg, hsl(170, 55%, 30%), hsl(200, 60%, 25%));
-    --gradient-warm: linear-gradient(135deg, hsl(35, 90%, 55%), hsl(20, 85%, 55%));
-    --gradient-calm: linear-gradient(135deg, hsl(170, 55%, 30%), hsl(145, 60%, 40%));
+    --gradient-hero: linear-gradient(135deg, #C5005E, #F26076);
+    --gradient-warm: linear-gradient(135deg, #FF9760, #FFD150);
+    --gradient-calm: linear-gradient(135deg, #458B73, #F26076);
     --gradient-sidebar: linear-gradient(180deg, hsl(200, 20%, 8%), hsl(200, 25%, 5%));
 
     --shadow-sm: 0 1px 2px hsl(200 25% 10% / 0.04);
@@ -90,7 +90,7 @@
     --secondary-foreground: 40 15% 85%;
     --muted: 200 15% 14%;
     --muted-foreground: 200 10% 55%;
-    --accent: 35 90% 55%;
+    --accent: 22 100% 69%;
     --accent-foreground: 200 25% 5%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 40 30% 97%;
@@ -158,6 +158,13 @@
     color: hsl(var(--level));
     border: 1px solid hsl(var(--level) / 0.2);
   }
+
+
+  .hero-text { @apply text-5xl md:text-7xl font-semibold leading-tight; }
+  .heading-text { @apply text-3xl md:text-4xl font-semibold; }
+  .section-title { @apply text-2xl font-semibold; }
+  .body-text { @apply text-base leading-relaxed text-muted-foreground; }
+  .caption-text { @apply text-xs tracking-wide text-muted-foreground; }
 
   .mood-chip {
     @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200;

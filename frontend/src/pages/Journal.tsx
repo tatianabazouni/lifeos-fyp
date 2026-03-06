@@ -1,15 +1,14 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import api from '@/services/api';
-import { LoadingSpinner, EmptyState, ErrorState } from '@/components/StateHelpers';
+import { useMemo, useRef, useState } from 'react';
+import { Bold, Italic, List, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Plus, BookOpen, Trash2, Edit3, Sparkles, Loader2, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
+import { EmotionTag, ReflectionPrompt } from '@/components/InteractiveComponents';
+import { JournalCard } from '@/components/ContentCards';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PrimaryButton } from '@/components/AppButtons';
+import { lifeData } from '@/lib/lifeData';
 
-interface JournalEntry {
+interface Entry {
   id: string;
   title: string;
   content: string;
@@ -18,178 +17,110 @@ interface JournalEntry {
   date: string;
 }
 
-const moods = [
-  '😊 Happy',
-  '😌 Calm',
-  '😢 Sad',
-  '😤 Frustrated',
-  '🤔 Reflective',
-  '🔥 Motivated',
-  '😴 Tired',
-  '🥰 Grateful'
+const prompts = [
+  'What did today teach me about my triggers?',
+  'Where did I choose alignment over approval?',
+  'What one truth do I need to hear from myself tonight?',
 ];
+const moods = ['Calm', 'Hopeful', 'Anxious', 'Grateful', 'Heavy', 'Focused'];
 
 export default function Journal() {
-  const { user } = useAuth(); // ✅ FIX ADDED
-
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<JournalEntry | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [mood, setMood] = useState('');
+  const [emotion, setEmotion] = useState('Calm');
+  const [entries, setEntries] = useState<Entry[]>(() => lifeData.getJournalEntries());
+  const [search, setSearch] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  const fetchEntries = async () => {
-    if (!user) return; // ✅ now valid
+  const content = editorRef.current?.innerText ?? '';
+  const words = useMemo(() => content.trim().split(/\s+/).filter(Boolean).length, [content]);
 
-    setLoading(true);
-    try {
-      const res = await api.get<JournalEntry[]>('/journal');
-      setEntries(
-        res.data.map((entry: any) => ({
-          ...entry,
-          id: entry._id || entry.id
-        }))
-      );
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e.message);
-    } finally {
-      setLoading(false);
-    }
+  const apply = (command: 'bold' | 'italic' | 'insertUnorderedList') => {
+    document.execCommand(command);
+    editorRef.current?.focus();
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchEntries();
-    }
-  }, [user]); // ✅ depend on user
-
-  const resetForm = () => {
+  const saveEntry = () => {
+    if (!title || !content.trim()) return;
+    const entry: Entry = { id: crypto.randomUUID(), title, content: content.trim(), mood: emotion, tags, date: new Date().toLocaleDateString() };
+    setEntries((prev) => {
+      const next = [entry, ...prev];
+      lifeData.setJournalEntries(next);
+      return next;
+    });
     setTitle('');
-    setContent('');
-    setMood('');
     setTags([]);
-    setTagInput('');
-    setEditing(null);
+    if (editorRef.current) editorRef.current.innerHTML = '';
+    localStorage.removeItem('journal_rich_draft');
   };
 
-  const openCreate = () => {
-    resetForm();
-    setDialogOpen(true);
+  const autosave = () => {
+    if (!editorRef.current) return;
+    localStorage.setItem('journal_rich_draft', editorRef.current.innerHTML);
   };
 
-  const openEdit = (entry: JournalEntry) => {
-    setEditing(entry);
-    setTitle(entry.title);
-    setContent(entry.content);
-    setMood(entry.mood);
-    setTags(entry.tags);
-    setDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!title || !content) return;
-
-    setSaving(true);
-    try {
-      if (editing) {
-        await api.put(`/journal/${editing.id}`, { title, content, mood, tags });
-      } else {
-        await api.post('/journal', { title, content, mood, tags });
-      }
-
-      setDialogOpen(false);
-      resetForm();
-      fetchEntries();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await api.delete(`/journal/${id}`);
-    fetchEntries();
-  };
-
-  const getAiFeedback = async () => {
-    if (!content) return;
-
-    setAiLoading(true);
-    try {
-      const res = await api.post<{ feedback: string }>(
-        '/ai/journal-feedback',
-        { content }
-      );
-
-      setContent(prev =>
-        prev + '\n\n--- AI Feedback ---\n' + res.data.feedback
-      );
-    } finally {
-      setAiLoading(false);
-    }
+  const loadDraft = () => {
+    const draft = localStorage.getItem('journal_rich_draft');
+    if (draft && editorRef.current) editorRef.current.innerHTML = draft;
   };
 
   const addTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
-    }
+    if (!tagInput.trim() || tags.includes(tagInput.trim())) return;
+    setTags((prev) => [...prev, tagInput.trim()]);
+    setTagInput('');
   };
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorState message={error} onRetry={fetchEntries} />;
+  const filtered = entries.filter((entry) => `${entry.title} ${entry.content} ${entry.mood} ${entry.tags.join(' ')}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div>
-      <div className="flex items-center justify-between page-header">
-        <div>
-          <h1 className="page-title">Journal</h1>
-          <p className="page-subtitle">Document your thoughts and reflections</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Entry
-        </Button>
-      </div>
+    <div className="space-y-6" onMouseEnter={loadDraft}>
+      <PageHeader title="Journal" subtitle="A deep reflection space with rich writing, emotional tags, and searchable timeline." />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <SectionContainer title="Rich writing studio" description="Write with structure, style, and presence.">
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Entry title" className="mb-3" />
+          <div className="mb-2 flex gap-2">
+            <button aria-label="Bold" onClick={() => apply('bold')} className="rounded-md border p-2 hover:bg-muted"><Bold className="h-4 w-4" /></button>
+            <button aria-label="Italic" onClick={() => apply('italic')} className="rounded-md border p-2 hover:bg-muted"><Italic className="h-4 w-4" /></button>
+            <button aria-label="List" onClick={() => apply('insertUnorderedList')} className="rounded-md border p-2 hover:bg-muted"><List className="h-4 w-4" /></button>
+          </div>
+          <div ref={editorRef} onInput={autosave} contentEditable suppressContentEditableWarning className="min-h-52 rounded-xl border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring" aria-label="Journal rich text editor" />
+          <div className="mt-3 flex flex-wrap gap-2">{moods.map((mood) => <EmotionTag key={mood} label={mood} active={emotion === mood} onClick={() => setEmotion(mood)} />)}</div>
+          <div className="mt-3 flex gap-2">
+            <Input value={tagInput} onChange={(event) => setTagInput(event.target.value)} placeholder="Add tag" />
+            <PrimaryButton variant="secondary" onClick={addTag}>Tag</PrimaryButton>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">{tags.map((tag) => <span key={tag} className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">#{tag}</span>)}</div>
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground"><span>{words} words</span><span>Writing streak: 5 days</span></div>
+          <PrimaryButton className="mt-4" onClick={saveEntry}>Save entry</PrimaryButton>
+        </SectionContainer>
 
-      {entries.length === 0 ? (
-        <EmptyState
-          icon={<BookOpen className="h-8 w-8 text-muted-foreground" />}
-          title="No journal entries yet"
-          description="Start writing your first entry to begin your reflection journey"
-          action={
-            <Button onClick={openCreate} variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Write Entry
-            </Button>
-          }
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {entries.map((entry, i) => (
-            <motion.div
-              key={entry.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="glass-card p-5 group"
-            >
-              <h3 className="font-semibold">{entry.title}</h3>
-              <p className="text-xs text-muted-foreground">{entry.date}</p>
-              <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
-                {entry.content}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      )}
+        <SectionContainer title="AI reflection prompts" description="Gentle questions to deepen self-understanding.">
+          <div className="space-y-3">
+            {prompts.map((prompt) => (
+              <ReflectionPrompt key={prompt} prompt={prompt} onUse={() => {
+                if (!editorRef.current) return;
+                editorRef.current.innerHTML += `<p><strong>${prompt}</strong></p><p></p>`;
+                autosave();
+              }} />
+            ))}
+          </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
+            <p className="mb-1 flex items-center gap-2 font-medium text-primary"><Sparkles className="h-4 w-4" />AI insight</p>
+            <p className="text-foreground/80">You often write about uncertainty when you skip rest. Consider journaling earlier before mental fatigue peaks.</p>
+          </motion.div>
+        </SectionContainer>
+
+        <SectionContainer title="Journal timeline" description="Search entries by thought, emotion, and tag.">
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search journal entries" className="mb-3" />
+          <div className="space-y-3">
+            {filtered.map((entry) => (
+              <JournalCard key={entry.id} title={entry.title} excerpt={entry.content} mood={`${entry.mood} ${entry.tags.map((tag) => `#${tag}`).join(' ')}`} date={entry.date} />
+            ))}
+            {filtered.length === 0 && <p className="text-sm text-muted-foreground">No matching entries yet.</p>}
+          </div>
+        </SectionContainer>
+      </div>
     </div>
   );
 }
