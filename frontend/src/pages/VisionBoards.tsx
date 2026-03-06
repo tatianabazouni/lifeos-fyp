@@ -1,227 +1,117 @@
-import { useEffect, useState } from 'react';
-import api from '@/services/api';
-import { LoadingSpinner, EmptyState, ErrorState } from '@/components/StateHelpers';
+import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Eye, Trash2, Edit3, Heart, Target, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ImagePlus, Plus, Trash2 } from 'lucide-react';
+import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
+import { PrimaryButton } from '@/components/AppButtons';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 
-interface VisionItem {
-  id: string;
-  image?: string;
-  title: string;
-  description: string;
-  emoji: string;
-  status: 'dream' | 'working' | 'reality';
-  notes?: string;
-  progress: number;
-}
-
-interface Board {
+interface VisionCard {
   id: string;
   title: string;
-  coverImage?: string;
-  isPublic: boolean;
-  items: VisionItem[];
+  image: string;
+}
+interface VisionBoard {
+  id: string;
+  title: string;
+  cards: VisionCard[];
 }
 
-const statusLabels = { dream: '💭 Dream', working: '🔨 Working On It', reality: '✨ Became Reality' };
-const statusColors = { dream: 'bg-info/10 text-info', working: 'bg-warning/10 text-warning', reality: 'bg-success/10 text-success' };
+const demoImage = 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop';
 
 export default function VisionBoards() {
-  const [boards, setBoards] = useState<Board[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeBoard, setActiveBoard] = useState<Board | null>(null);
-  const [boardDialog, setBoardDialog] = useState(false);
-  const [itemDialog, setItemDialog] = useState(false);
+  const [boards, setBoards] = useState<VisionBoard[]>([{ id: 'b1', title: 'Next Chapter', cards: [{ id: 'c1', title: 'Ocean-side deep work', image: demoImage }, { id: 'c2', title: 'Health + grounded mornings', image: demoImage }] }]);
+  const [activeBoardId, setActiveBoardId] = useState('b1');
+  const [newBoard, setNewBoard] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // Board form
-  const [bTitle, setBTitle] = useState('');
-  const [bPublic, setBPublic] = useState(false);
+  const activeBoard = boards.find((board) => board.id === activeBoardId);
 
-  // Item form
-  const [iTitle, setITitle] = useState('');
-  const [iDesc, setIDesc] = useState('');
-  const [iEmoji, setIEmoji] = useState('⭐');
-  const [iStatus, setIStatus] = useState<'dream' | 'working' | 'reality'>('dream');
-
-  const fetch_ = () => {
-    setLoading(true);
-    api.get<Board[]>('/boards')
-      .then((res) => setBoards(res.data))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+  const createBoard = () => {
+    if (!newBoard.trim()) return;
+    const board = { id: crypto.randomUUID(), title: newBoard, cards: [] };
+    setBoards((prev) => [...prev, board]);
+    setActiveBoardId(board.id);
+    setNewBoard('');
   };
 
-  useEffect(() => { fetch_(); }, []);
+  const addImageCard = (file?: File) => {
+    if (!activeBoard) return;
+    const toBase64 = (target: File) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const card: VisionCard = { id: crypto.randomUUID(), title: target.name.replace(/\..+$/, ''), image: String(reader.result ?? demoImage) };
+        setBoards((prev) => prev.map((board) => board.id === activeBoard.id ? { ...board, cards: [...board.cards, card] } : board));
+      };
+      reader.readAsDataURL(target);
+    };
 
-  const saveBoard = async () => {
-    if (!bTitle) return;
-    await api.post('/boards', { title: bTitle, isPublic: bPublic });
-    setBoardDialog(false); setBTitle(''); fetch_();
+    if (file) toBase64(file);
+    else {
+      const card: VisionCard = { id: crypto.randomUUID(), title: 'Untitled vision', image: demoImage };
+      setBoards((prev) => prev.map((board) => board.id === activeBoard.id ? { ...board, cards: [...board.cards, card] } : board));
+    }
   };
 
-  const deleteBoard = async (id: string) => {
-    await api.delete(`/boards/${id}`);
-    if (activeBoard?.id === id) setActiveBoard(null);
-    fetch_();
+  const reorderCards = (draggedId: string, overId: string) => {
+    if (!activeBoard || draggedId === overId) return;
+    const cards = [...activeBoard.cards];
+    const fromIndex = cards.findIndex((card) => card.id === draggedId);
+    const toIndex = cards.findIndex((card) => card.id === overId);
+    if (fromIndex < 0 || toIndex < 0) return;
+    const [moved] = cards.splice(fromIndex, 1);
+    cards.splice(toIndex, 0, moved);
+    setBoards((prev) => prev.map((board) => board.id === activeBoard.id ? { ...board, cards } : board));
   };
 
-  const openBoard = (board: Board) => {
-    setActiveBoard(board);
-    // Fetch items
-    api.get<VisionItem[]>(`/vision-items?boardId=${board.id}`)
-      .then((res) => setActiveBoard({ ...board, items: res.data }))
-      .catch(() => {});
-  };
+  const removeCard = (id: string) => setBoards((prev) => prev.map((board) => board.id === activeBoardId ? { ...board, cards: board.cards.filter((card) => card.id !== id) } : board));
 
-  const saveItem = async () => {
-    if (!iTitle || !activeBoard) return;
-    await api.post('/vision-items', { boardId: activeBoard.id, title: iTitle, description: iDesc, emoji: iEmoji, status: iStatus, progress: 0 });
-    setItemDialog(false); setITitle(''); setIDesc('');
-    openBoard(activeBoard);
-  };
-
-  const deleteItem = async (id: string) => {
-    await api.delete(`/vision-items/${id}`);
-    if (activeBoard) openBoard(activeBoard);
-  };
-
-  const convertToGoal = async (item: VisionItem) => {
-    await api.post('/goals', { title: item.title, category: 'Personal', label: 'From Vision Board', steps: [] });
-  };
-
-  const updateStatus = async (itemId: string, status: 'dream' | 'working' | 'reality') => {
-    await api.put(`/vision-items/${itemId}`, { status });
-    if (activeBoard) openBoard(activeBoard);
-  };
-
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorState message={error} onRetry={fetch_} />;
-
-  // Board detail view
-  if (activeBoard) {
-    return (
-      <div>
-        <div className="flex items-center justify-between page-header">
-          <div>
-            <button onClick={() => setActiveBoard(null)} className="text-sm text-primary hover:underline mb-1 block">← Back to boards</button>
-            <h1 className="page-title">{activeBoard.title}</h1>
-          </div>
-          <Button onClick={() => { setITitle(''); setIDesc(''); setIEmoji('⭐'); setIStatus('dream'); setItemDialog(true); }}>
-            <Plus className="h-4 w-4 mr-2" />Add Vision
-          </Button>
-        </div>
-
-        {(!activeBoard.items || activeBoard.items.length === 0) ? (
-          <EmptyState icon={<Eye className="h-8 w-8 text-muted-foreground" />} title="Empty board" description="Add your first vision to this board" />
-        ) : (
-          <div className="masonry-grid">
-            {activeBoard.items.map((item) => (
-              <motion.div key={item.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="masonry-item glass-card p-4 group">
-                <div className="text-3xl mb-3">{item.emoji}</div>
-                <h3 className="font-semibold mb-1">{item.title}</h3>
-                <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[item.status]}`}>{statusLabels[item.status]}</span>
-                <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Select value={item.status} onValueChange={(v) => updateStatus(item.id, v as any)}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dream">Dream</SelectItem>
-                      <SelectItem value="working">Working On It</SelectItem>
-                      <SelectItem value="reality">Became Reality</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" variant="outline" onClick={() => convertToGoal(item)} className="text-xs h-7">
-                    <Target className="h-3 w-3 mr-1" />Goal
-                  </Button>
-                  <button onClick={() => deleteItem(item.id)} className="text-destructive">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </motion.div>
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Vision Boards" subtitle="Design your future visually. Rearrange your intentions until they feel true." />
+      <div className="grid gap-6 lg:grid-cols-4">
+        <SectionContainer title="Boards" description="Create and switch between visual futures.">
+          <div className="space-y-2">
+            {boards.map((board) => (
+              <button key={board.id} onClick={() => setActiveBoardId(board.id)} className={`w-full rounded-lg border p-2 text-left text-sm transition ${board.id === activeBoardId ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
+                {board.title}
+              </button>
             ))}
           </div>
-        )}
-
-        <Dialog open={itemDialog} onOpenChange={setItemDialog}>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="font-serif">Add Vision</DialogTitle></DialogHeader>
-            <div className="space-y-4 mt-2">
-              <div className="flex gap-3">
-                <Input placeholder="Emoji" value={iEmoji} onChange={(e) => setIEmoji(e.target.value)} className="w-16 text-center text-xl" />
-                <Input placeholder="Title" value={iTitle} onChange={(e) => setITitle(e.target.value)} className="flex-1" />
-              </div>
-              <Textarea placeholder="Describe your vision..." value={iDesc} onChange={(e) => setIDesc(e.target.value)} rows={3} />
-              <Select value={iStatus} onValueChange={(v) => setIStatus(v as any)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dream">💭 Dream</SelectItem>
-                  <SelectItem value="working">🔨 Working On It</SelectItem>
-                  <SelectItem value="reality">✨ Became Reality</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={saveItem} className="w-full">Add Vision</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-    );
-  }
-
-  // Boards grid
-  return (
-    <div>
-      <div className="flex items-center justify-between page-header">
-        <div>
-          <h1 className="page-title">Vision Boards</h1>
-          <p className="page-subtitle">Visualize your dreams and aspirations</p>
-        </div>
-        <Button onClick={() => setBoardDialog(true)}><Plus className="h-4 w-4 mr-2" />New Board</Button>
-      </div>
-
-      {boards.length === 0 ? (
-        <EmptyState icon={<Eye className="h-8 w-8 text-muted-foreground" />} title="No vision boards yet" description="Create your first board to start visualizing your dreams" />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {boards.map((board) => (
-            <motion.div key={board.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card overflow-hidden group cursor-pointer" onClick={() => openBoard(board)}>
-              <div className="h-32 gradient-calm flex items-center justify-center">
-                <Eye className="h-10 w-10 text-primary-foreground/60" />
-              </div>
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">{board.title}</h3>
-                  <button onClick={(e) => { e.stopPropagation(); deleteBoard(board.id); }} className="opacity-0 group-hover:opacity-100 text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{board.isPublic ? 'Public' : 'Private'}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
-
-      <Dialog open={boardDialog} onOpenChange={setBoardDialog}>
-        <DialogContent>
-          <DialogHeader><DialogTitle className="font-serif">New Board</DialogTitle></DialogHeader>
-          <div className="space-y-4 mt-2">
-            <Input placeholder="Board title" value={bTitle} onChange={(e) => setBTitle(e.target.value)} />
-            <div className="flex items-center gap-2">
-              <Switch checked={bPublic} onCheckedChange={setBPublic} id="public" />
-              <Label htmlFor="public">Make public</Label>
-            </div>
-            <Button onClick={saveBoard} className="w-full">Create Board</Button>
+          <div className="mt-4 flex gap-2">
+            <Input value={newBoard} onChange={(event) => setNewBoard(event.target.value)} placeholder="Create board" />
+            <PrimaryButton onClick={createBoard}><Plus className="h-4 w-4" /></PrimaryButton>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SectionContainer>
+
+        <SectionContainer title={activeBoard?.title ?? 'Board'} description="Drag cards to reorder your vision narrative.">
+          <div className="mb-4 flex gap-2">
+            <PrimaryButton onClick={() => fileRef.current?.click()}><ImagePlus className="mr-2 h-4 w-4" />Add image</PrimaryButton>
+            <PrimaryButton variant="secondary" onClick={() => addImageCard()}><Plus className="mr-2 h-4 w-4" />Quick card</PrimaryButton>
+            <input ref={fileRef} type="file" className="hidden" accept="image/*" onChange={(event) => event.target.files?.[0] && addImageCard(event.target.files[0])} />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {activeBoard?.cards.map((card, index) => (
+              <motion.article
+                key={card.id}
+                draggable
+                onDragStart={(event) => event.dataTransfer.setData('text/plain', card.id)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => reorderCards(event.dataTransfer.getData('text/plain'), card.id)}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.04 }}
+                className="group overflow-hidden rounded-xl border bg-card"
+              >
+                <img src={card.image} alt={card.title} className="h-32 w-full object-cover" />
+                <div className="flex items-center justify-between p-3">
+                  <p className="text-sm font-medium">{card.title}</p>
+                  <button aria-label="Delete card" onClick={() => removeCard(card.id)} className="opacity-0 transition group-hover:opacity-100"><Trash2 className="h-4 w-4 text-destructive" /></button>
+                </div>
+              </motion.article>
+            ))}
+          </div>
+        </SectionContainer>
+      </div>
     </div>
   );
 }

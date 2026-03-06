@@ -1,124 +1,91 @@
-import { useState, useRef, useEffect } from 'react';
-import api from '@/services/api';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Brain, Target, Flame, ListChecks, Loader2, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Clock3, Sparkles } from 'lucide-react';
+import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
+import { AIInsightCard } from '@/components/ContentCards';
 import { Input } from '@/components/ui/input';
+import { PrimaryButton } from '@/components/AppButtons';
 
-interface Message {
-  id: string;
+interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
+  timestamp: string;
 }
 
-const modes = [
-  { key: 'chat', label: 'Chat', icon: Brain },
-  { key: 'goals', label: 'Goals', icon: Target },
-  { key: 'motivation', label: 'Motivation', icon: Flame },
-  { key: 'priorities', label: 'Priorities', icon: ListChecks },
+const suggestionCards = [
+  'Help me process today without overthinking.',
+  'Give me one reflective question based on my goals.',
+  'What pattern do you see in my recent moods?',
 ];
 
 export default function AICompanion() {
-  const [mode, setMode] = useState('chat');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([{ role: 'ai', content: 'I am here with you. What feels most present today?', timestamp: 'Now' }]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [typing, setTyping] = useState(false);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const history = useMemo(() => messages.slice(-8), [messages]);
 
-  const send = async () => {
-    if (!input.trim() || loading) return;
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input.trim() };
-    setMessages((prev) => [...prev, userMsg]);
+  const send = (preset?: string) => {
+    const value = (preset ?? input).trim();
+    if (!value) return;
+
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setMessages((prev) => [...prev, { role: 'user', content: value, timestamp: now }]);
     setInput('');
-    setLoading(true);
+    setTyping(true);
 
-    try {
-      const res = await api.post<{ message: string }>('/ai/chat', { message: userMsg.content, mode });
-      setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', content: res.data.message }]);
-    } catch {
-      setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', content: 'Sorry, I encountered an error. Please try again.' }]);
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => {
+      const reply = `I hear you: "${value}". Name the emotion, identify the unmet need beneath it, then choose one tiny action before sleep.`;
+      setMessages((prev) => [...prev, { role: 'ai', content: reply, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      setTyping(false);
+    }, 900);
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <div className="page-header">
-        <h1 className="page-title">AI Companion</h1>
-        <p className="page-subtitle">Your personal growth assistant</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader title="AI Companion" subtitle="A calm life-coach interface with chat, memory references, and reflection prompts." />
 
-      {/* Mode tabs */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-        {modes.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setMode(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-              mode === key
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-4 opacity-60">
-            <div className="w-16 h-16 rounded-2xl gradient-hero flex items-center justify-center">
-              <Sparkles className="h-8 w-8 text-primary-foreground" />
-            </div>
-            <div>
-              <p className="font-medium">Start a conversation</p>
-              <p className="text-sm text-muted-foreground mt-1">Ask me anything about your goals, habits, or life</p>
-            </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <SectionContainer title="Conversation interface" description="Contextual, private, and emotionally intelligent.">
+          <div className="mb-3 max-h-[420px] space-y-2 overflow-y-auto pr-1">
+            {history.map((message, index) => (
+              <motion.div key={`${message.timestamp}-${index}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className={message.role === 'user' ? 'ml-auto max-w-[85%] rounded-2xl bg-primary px-4 py-3 text-sm text-white' : 'max-w-[85%] rounded-2xl bg-muted px-4 py-3 text-sm'}>
+                <p>{message.content}</p>
+                <p className="mt-1 text-[10px] opacity-70">{message.timestamp}</p>
+              </motion.div>
+            ))}
+            {typing && (
+              <motion.div initial={{ opacity: 0.5 }} animate={{ opacity: 1 }} transition={{ repeat: Infinity, repeatType: 'reverse', duration: 0.8 }} className="max-w-[85%] rounded-2xl bg-muted px-4 py-3 text-sm">
+                Typing...
+              </motion.div>
+            )}
           </div>
-        )}
-        {messages.map((msg) => (
-          <motion.div
-            key={msg.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}>
-              {msg.content}
-            </div>
-          </motion.div>
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="chat-bubble-ai flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Thinking...</span>
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
 
-      {/* Input */}
-      <div className="flex gap-2 pt-4 border-t border-border">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && send()}
-          placeholder="Type your message..."
-          className="flex-1"
-        />
-        <Button onClick={send} disabled={loading || !input.trim()} size="icon">
-          <Send className="h-4 w-4" />
-        </Button>
+          <div className="flex gap-2">
+            <Input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && send()} placeholder="Share what feels heavy right now" />
+            <PrimaryButton onClick={() => send()}>Send</PrimaryButton>
+          </div>
+        </SectionContainer>
+
+        <SectionContainer title="AI suggestion cards" description="Tap to continue a guided reflection.">
+          <div className="space-y-2">
+            {suggestionCards.map((card) => (
+              <button key={card} onClick={() => send(card)} className="w-full rounded-lg border p-3 text-left text-sm transition hover:bg-muted">{card}</button>
+            ))}
+          </div>
+        </SectionContainer>
+
+        <SectionContainer title="Insights + memory referencing">
+          <div className="space-y-3">
+            <AIInsightCard title="Journal-based insight" content="You sound most regulated on days you walk early and reduce social comparison exposure." />
+            <AIInsightCard title="Memory reference" content="In February, after your first prototype demo, you wrote that courage increases when you share process, not perfection." />
+            <div className="rounded-xl border bg-card p-3 text-sm text-muted-foreground">
+              <p className="mb-1 flex items-center gap-2 font-medium text-foreground"><Clock3 className="h-4 w-4" />Conversation history</p>
+              <p>Last 8 messages retained in this session to preserve narrative context.</p>
+            </div>
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm"><p className="flex items-center gap-2 font-medium text-primary"><Sparkles className="h-4 w-4" />Reflection prompt</p><p className="mt-1">What part of you needs compassion before strategy tonight?</p></div>
+          </div>
+        </SectionContainer>
       </div>
     </div>
   );

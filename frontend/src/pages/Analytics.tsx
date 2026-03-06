@@ -1,106 +1,97 @@
-import { useEffect, useState } from 'react';
-import api from '@/services/api';
-import { LoadingSpinner, ErrorState } from '@/components/StateHelpers';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Target, Heart } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, Tooltip, PieChart, Pie, Cell } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from 'recharts';
+import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
+import { InsightCard } from '@/components/ContentCards';
 
-interface AnalyticsData {
-  goalsCompletion: { month: string; completed: number; total: number }[];
-  moodTrends: { date: string; score: number }[];
-  growth: { category: string; value: number }[];
-  summary: { totalEntries: number; goalsCompleted: number; streak: number; level: number };
-}
+const journalFrequency = [
+  { week: 'W1', entries: 4 },
+  { week: 'W2', entries: 5 },
+  { week: 'W3', entries: 3 },
+  { week: 'W4', entries: 6 },
+];
+const emotionalTrend = [
+  { day: 'Mon', calm: 6, anxious: 3 },
+  { day: 'Tue', calm: 7, anxious: 2 },
+  { day: 'Wed', calm: 5, anxious: 4 },
+  { day: 'Thu', calm: 8, anxious: 2 },
+  { day: 'Fri', calm: 7, anxious: 3 },
+];
+const goalProgress = [
+  { goal: 'Wellbeing', progress: 62 },
+  { goal: 'Startup', progress: 48 },
+  { goal: 'Relationships', progress: 71 },
+];
+const memoryFrequency = [
+  { label: 'Family', value: 6 },
+  { label: 'Career', value: 5 },
+  { label: 'Travel', value: 3 },
+  { label: 'Self', value: 4 },
+];
 
-const COLORS = ['hsl(170, 55%, 30%)', 'hsl(35, 90%, 55%)', 'hsl(145, 60%, 40%)', 'hsl(200, 80%, 50%)', 'hsl(260, 60%, 55%)'];
+const colors = ['#C5005E', '#F26076', '#FF9760', '#FFD150'];
 
 export default function Analytics() {
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const fetch_ = () => {
-    setLoading(true);
-    api.get<AnalyticsData>('/analytics')
-      .then((res) => setData(res.data))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetch_(); }, []);
-
-  if (loading) return <LoadingSpinner message="Loading analytics..." />;
-  if (error) return <ErrorState message={error} onRetry={fetch_} />;
-
   return (
     <div className="space-y-6">
-      <div className="page-header">
-        <h1 className="page-title">Analytics</h1>
-        <p className="page-subtitle">Track your growth and progress</p>
+      <PageHeader title="Analytics" subtitle="See patterns in journaling, emotions, progress, and memory density across your life." />
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <InsightCard title="Journal frequency" insight="18 entries this month. Highest consistency appears after 9pm." />
+        <InsightCard title="Emotional trend" insight="Calmness rising over the last two weeks with fewer anxiety spikes." />
+        <InsightCard title="Goal progress" insight="Relationships is your fastest-growing dimension this quarter." />
+        <InsightCard title="Memory frequency" insight="Most memories tagged around family and career turning points." />
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="stat-card">
-          <div className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /><span className="stat-label">Entries</span></div>
-          <span className="stat-value">{data?.summary?.totalEntries || 0}</span>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-2"><Target className="h-4 w-4 text-success" /><span className="stat-label">Goals Done</span></div>
-          <span className="stat-value">{data?.summary?.goalsCompleted || 0}</span>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-streak" /><span className="stat-label">Streak</span></div>
-          <span className="stat-value">{data?.summary?.streak || 0}</span>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-2"><Heart className="h-4 w-4 text-level" /><span className="stat-label">Level</span></div>
-          <span className="stat-value">{data?.summary?.level || 1}</span>
-        </div>
-      </div>
-
-      {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
-          <h3 className="font-semibold mb-4 font-serif">Goals Completion</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={data?.goalsCompletion || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" fontSize={12} stroke="hsl(var(--muted-foreground))" />
-              <YAxis fontSize={12} stroke="hsl(var(--muted-foreground))" />
-              <Tooltip />
-              <Bar dataKey="completed" fill="hsl(170, 55%, 30%)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="total" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </motion.div>
+        <SectionContainer title="Journal frequency">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={journalFrequency}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="week" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="entries" fill="#C5005E" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </motion.div>
+        </SectionContainer>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-5">
-          <h3 className="font-semibold mb-4 font-serif">Mood Trends</h3>
+        <SectionContainer title="Emotional trends">
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={data?.moodTrends || []}>
+            <LineChart data={emotionalTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" fontSize={12} stroke="hsl(var(--muted-foreground))" />
-              <YAxis fontSize={12} stroke="hsl(var(--muted-foreground))" />
+              <XAxis dataKey="day" />
+              <YAxis />
               <Tooltip />
-              <Line type="monotone" dataKey="score" stroke="hsl(35, 90%, 55%)" strokeWidth={2} dot={{ fill: 'hsl(35, 90%, 55%)' }} />
+              <Line dataKey="calm" stroke="#458B73" strokeWidth={2} />
+              <Line dataKey="anxious" stroke="#F26076" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
-        </motion.div>
+        </SectionContainer>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-5 lg:col-span-2">
-          <h3 className="font-semibold mb-4 font-serif">Growth by Category</h3>
+        <SectionContainer title="Goal progress graph">
+          <ResponsiveContainer width="100%" height={250}>
+            <AreaChart data={goalProgress}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="goal" />
+              <YAxis />
+              <Tooltip />
+              <Area type="monotone" dataKey="progress" stroke="#FF9760" fill="#FF976033" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </SectionContainer>
+
+        <SectionContainer title="Memory frequency">
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <Pie data={data?.growth || []} dataKey="value" nameKey="category" cx="50%" cy="50%" outerRadius={100} label>
-                {(data?.growth || []).map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
+              <Pie data={memoryFrequency} dataKey="value" nameKey="label" outerRadius={90} label>
+                {memoryFrequency.map((_, index) => <Cell key={index} fill={colors[index % colors.length]} />)}
               </Pie>
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
-        </motion.div>
+        </SectionContainer>
       </div>
     </div>
   );
