@@ -22,6 +22,7 @@ import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
 import Index from '@/pages/Index';
 import Onboarding from '@/pages/Onboarding';
+import Planner from '@/pages/Planner';
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ export default function App() {
                   <Route path="/daily-photo" element={<DailyPhoto />} />
                   <Route path="/connections" element={<Connections />} />
                   <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/planner" element={<Planner />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/home" element={<Navigate to="/dashboard" replace />} />
                 </Route>

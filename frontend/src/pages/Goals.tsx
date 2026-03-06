@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Award, Check, Pencil, Trash2 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
@@ -6,6 +6,7 @@ import { GoalCard } from '@/components/ContentCards';
 import { GoalProgressBar, LifeTimeline } from '@/components/InteractiveComponents';
 import { PrimaryButton } from '@/components/AppButtons';
 import { Input } from '@/components/ui/input';
+import { lifeData } from '@/lib/lifeData';
 
 interface Goal {
   id: string;
@@ -15,10 +16,14 @@ interface Goal {
 }
 
 export default function Goals() {
-  const [goals, setGoals] = useState<Goal[]>([
-    { id: '1', title: 'Build emotional consistency', category: 'Wellbeing', milestones: [{ id: 'm1', text: 'Journal 5x/week', done: true }, { id: 'm2', text: 'Sleep before 12am', done: false }] },
-    { id: '2', title: 'Ship startup alpha', category: 'Startup', milestones: [{ id: 'm3', text: 'Finish onboarding flow', done: true }, { id: 'm4', text: 'Add analytics screen', done: false }] },
-  ]);
+  const [goals, setGoals] = useState<Goal[]>(() => {
+    const stored = lifeData.getGoals();
+    if (stored.length) return stored;
+    return [
+      { id: '1', title: 'Build emotional consistency', category: 'Wellbeing', milestones: [{ id: 'm1', text: 'Journal 5x/week', done: true }, { id: 'm2', text: 'Sleep before 12am', done: false }] },
+      { id: '2', title: 'Ship startup alpha', category: 'Startup', milestones: [{ id: 'm3', text: 'Finish onboarding flow', done: true }, { id: 'm4', text: 'Add analytics screen', done: false }] },
+    ];
+  });
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Personal');
 
@@ -27,23 +32,33 @@ export default function Goals() {
   const chartData = goals.map((goal) => ({ name: goal.title.split(' ').slice(0, 2).join(' '), progress: progressOf(goal) }));
   const achievements = goals.filter((goal) => progressOf(goal) === 100);
 
+  useEffect(() => {
+    if (!lifeData.getGoals().length && goals.length) {
+      lifeData.setGoals(goals);
+    }
+  }, []);
+
   const createGoal = () => {
     if (!title.trim()) return;
-    setGoals((prev) => [...prev, { id: crypto.randomUUID(), title, category, milestones: [{ id: crypto.randomUUID(), text: 'Define first milestone', done: false }] }]);
+    setGoals((prev) => {
+      const next = [...prev, { id: crypto.randomUUID(), title, category, milestones: [{ id: crypto.randomUUID(), text: 'Define first milestone', done: false }] }];
+      lifeData.setGoals(next);
+      return next;
+    });
     setTitle('');
   };
 
-  const deleteGoal = (id: string) => setGoals((prev) => prev.filter((goal) => goal.id !== id));
+  const deleteGoal = (id: string) => setGoals((prev) => { const next = prev.filter((goal) => goal.id !== id); lifeData.setGoals(next); return next; });
   const addMilestone = (goalId: string) => {
     const text = prompt('Milestone');
     if (!text) return;
-    setGoals((prev) => prev.map((goal) => goal.id === goalId ? { ...goal, milestones: [...goal.milestones, { id: crypto.randomUUID(), text, done: false }] } : goal));
+    setGoals((prev) => { const next = prev.map((goal) => goal.id === goalId ? { ...goal, milestones: [...goal.milestones, { id: crypto.randomUUID(), text, done: false }] } : goal); lifeData.setGoals(next); return next; });
   };
-  const toggleMilestone = (goalId: string, milestoneId: string) => setGoals((prev) => prev.map((goal) => goal.id === goalId ? { ...goal, milestones: goal.milestones.map((milestone) => milestone.id === milestoneId ? { ...milestone, done: !milestone.done } : milestone) } : goal));
+  const toggleMilestone = (goalId: string, milestoneId: string) => setGoals((prev) => { const next = prev.map((goal) => goal.id === goalId ? { ...goal, milestones: goal.milestones.map((milestone) => milestone.id === milestoneId ? { ...milestone, done: !milestone.done } : milestone) } : goal); lifeData.setGoals(next); return next; });
   const editTitle = (goalId: string) => {
     const value = prompt('Edit goal title');
     if (!value) return;
-    setGoals((prev) => prev.map((goal) => goal.id === goalId ? { ...goal, title: value } : goal));
+    setGoals((prev) => { const next = prev.map((goal) => goal.id === goalId ? { ...goal, title: value } : goal); lifeData.setGoals(next); return next; });
   };
 
   return (

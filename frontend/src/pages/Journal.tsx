@@ -6,6 +6,7 @@ import { EmotionTag, ReflectionPrompt } from '@/components/InteractiveComponents
 import { JournalCard } from '@/components/ContentCards';
 import { Input } from '@/components/ui/input';
 import { PrimaryButton } from '@/components/AppButtons';
+import { lifeData } from '@/lib/lifeData';
 
 interface Entry {
   id: string;
@@ -26,7 +27,7 @@ const moods = ['Calm', 'Hopeful', 'Anxious', 'Grateful', 'Heavy', 'Focused'];
 export default function Journal() {
   const [title, setTitle] = useState('');
   const [emotion, setEmotion] = useState('Calm');
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<Entry[]>(() => lifeData.getJournalEntries());
   const [search, setSearch] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -43,7 +44,11 @@ export default function Journal() {
   const saveEntry = () => {
     if (!title || !content.trim()) return;
     const entry: Entry = { id: crypto.randomUUID(), title, content: content.trim(), mood: emotion, tags, date: new Date().toLocaleDateString() };
-    setEntries((prev) => [entry, ...prev]);
+    setEntries((prev) => {
+      const next = [entry, ...prev];
+      lifeData.setJournalEntries(next);
+      return next;
+    });
     setTitle('');
     setTags([]);
     if (editorRef.current) editorRef.current.innerHTML = '';

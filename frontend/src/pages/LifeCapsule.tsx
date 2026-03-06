@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Camera, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
@@ -6,6 +6,7 @@ import { MemoryCard } from '@/components/ContentCards';
 import { PrimaryButton } from '@/components/AppButtons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { lifeData } from '@/lib/lifeData';
 
 interface MemoryEntry {
   id: string;
@@ -17,10 +18,14 @@ interface MemoryEntry {
 }
 
 export default function LifeCapsule() {
-  const [entries, setEntries] = useState<MemoryEntry[]>([
-    { id: '1', title: 'First pitch day', description: 'I stopped apologizing for ambition and spoke clearly.', year: 2026, date: '2026-02-14' },
-    { id: '2', title: 'Family dinner reset', description: 'Everyone stayed at the table longer than usual.', year: 2025, date: '2025-11-08' },
-  ]);
+  const [entries, setEntries] = useState<MemoryEntry[]>(() => {
+    const stored = lifeData.getMemories();
+    if (stored.length) return stored;
+    return [
+      { id: '1', title: 'First pitch day', description: 'I stopped apologizing for ambition and spoke clearly.', year: 2026, date: '2026-02-14' },
+      { id: '2', title: 'Family dinner reset', description: 'Everyone stayed at the table longer than usual.', year: 2025, date: '2025-11-08' },
+    ];
+  });
   const [year, setYear] = useState(2026);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -29,6 +34,12 @@ export default function LifeCapsule() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const yearEntries = useMemo(() => entries.filter((entry) => entry.year === year).sort((a, b) => b.date.localeCompare(a.date)), [entries, year]);
+
+  useEffect(() => {
+    if (!lifeData.getMemories().length && entries.length) {
+      lifeData.setMemories(entries);
+    }
+  }, []);
 
   const onUpload = (file?: File) => {
     if (!file) return;
@@ -40,7 +51,11 @@ export default function LifeCapsule() {
   const addMemory = () => {
     if (!title || !date) return;
     const selectedYear = Number(date.slice(0, 4));
-    setEntries((prev) => [{ id: crypto.randomUUID(), title, description, date, year: selectedYear, photo }, ...prev]);
+    setEntries((prev) => {
+      const next = [{ id: crypto.randomUUID(), title, description, date, year: selectedYear, photo }, ...prev];
+      lifeData.setMemories(next);
+      return next;
+    });
     setTitle('');
     setDescription('');
     setDate('');
