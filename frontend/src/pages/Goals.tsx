@@ -1,57 +1,107 @@
 import { useMemo, useState } from 'react';
+import { Award, Check, Pencil, Trash2 } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
 import { GoalCard } from '@/components/ContentCards';
 import { GoalProgressBar, LifeTimeline } from '@/components/InteractiveComponents';
-import { Input } from '@/components/ui/input';
 import { PrimaryButton } from '@/components/AppButtons';
+import { Input } from '@/components/ui/input';
 
-interface Goal { id: string; title: string; category: string; progress: number }
+interface Goal {
+  id: string;
+  title: string;
+  category: string;
+  milestones: { id: string; text: string; done: boolean }[];
+}
 
 export default function Goals() {
+  const [goals, setGoals] = useState<Goal[]>([
+    { id: '1', title: 'Build emotional consistency', category: 'Wellbeing', milestones: [{ id: 'm1', text: 'Journal 5x/week', done: true }, { id: 'm2', text: 'Sleep before 12am', done: false }] },
+    { id: '2', title: 'Ship startup alpha', category: 'Startup', milestones: [{ id: 'm3', text: 'Finish onboarding flow', done: true }, { id: 'm4', text: 'Add analytics screen', done: false }] },
+  ]);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Personal');
-  const [goals, setGoals] = useState<Goal[]>([
-    { id: '1', title: 'Improve emotional resilience', category: 'Wellbeing', progress: 65 },
-    { id: '2', title: 'Launch beta to 50 users', category: 'Startup', progress: 40 },
-  ]);
 
-  const completion = useMemo(() => Math.round(goals.reduce((acc, g) => acc + g.progress, 0) / goals.length), [goals]);
+  const progressOf = (goal: Goal) => Math.round((goal.milestones.filter((milestone) => milestone.done).length / Math.max(goal.milestones.length, 1)) * 100);
+  const totalProgress = useMemo(() => Math.round(goals.reduce((sum, goal) => sum + progressOf(goal), 0) / Math.max(goals.length, 1)), [goals]);
+  const chartData = goals.map((goal) => ({ name: goal.title.split(' ').slice(0, 2).join(' '), progress: progressOf(goal) }));
+  const achievements = goals.filter((goal) => progressOf(goal) === 100);
 
-  const addGoal = () => {
-    if (!title) return;
-    setGoals((prev) => [...prev, { id: crypto.randomUUID(), title, category, progress: 0 }]);
+  const createGoal = () => {
+    if (!title.trim()) return;
+    setGoals((prev) => [...prev, { id: crypto.randomUUID(), title, category, milestones: [{ id: crypto.randomUUID(), text: 'Define first milestone', done: false }] }]);
     setTitle('');
   };
 
-  const bump = (id: string) => setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, progress: Math.min(g.progress + 10, 100) } : g)));
-  const remove = (id: string) => setGoals((prev) => prev.filter((g) => g.id !== id));
+  const deleteGoal = (id: string) => setGoals((prev) => prev.filter((goal) => goal.id !== id));
+  const addMilestone = (goalId: string) => {
+    const text = prompt('Milestone');
+    if (!text) return;
+    setGoals((prev) => prev.map((goal) => goal.id === goalId ? { ...goal, milestones: [...goal.milestones, { id: crypto.randomUUID(), text, done: false }] } : goal));
+  };
+  const toggleMilestone = (goalId: string, milestoneId: string) => setGoals((prev) => prev.map((goal) => goal.id === goalId ? { ...goal, milestones: goal.milestones.map((milestone) => milestone.id === milestoneId ? { ...milestone, done: !milestone.done } : milestone) } : goal));
+  const editTitle = (goalId: string) => {
+    const value = prompt('Edit goal title');
+    if (!value) return;
+    setGoals((prev) => prev.map((goal) => goal.id === goalId ? { ...goal, title: value } : goal));
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Goals" subtitle="Turn intention into milestones, and milestones into identity." />
+      <PageHeader title="Goals" subtitle="Build meaningful growth through milestones, progress visibility, and achievement signals." />
+
       <div className="grid gap-6 lg:grid-cols-3">
         <SectionContainer title="Create goal">
-          <Input placeholder="Goal title" value={title} onChange={(e) => setTitle(e.target.value)} className="mb-3" />
-          <Input placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} className="mb-3" />
-          <PrimaryButton onClick={addGoal}>Add Goal</PrimaryButton>
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Goal title" className="mb-3" />
+          <Input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Category" className="mb-3" />
+          <PrimaryButton onClick={createGoal}>Create goal</PrimaryButton>
         </SectionContainer>
-        <SectionContainer title="Overall growth">
-          <GoalProgressBar value={Number.isFinite(completion) ? completion : 0} />
-          <p className="mt-2 text-sm text-muted-foreground">{Number.isFinite(completion) ? completion : 0}% total completion across all active goals.</p>
+
+        <SectionContainer title="Progress overview">
+          <GoalProgressBar value={totalProgress} />
+          <p className="mt-2 text-sm text-muted-foreground">Total completion: {totalProgress}%</p>
+          <div className="mt-4 rounded-lg border p-3">
+            <p className="mb-2 text-sm font-medium">Achievement indicators</p>
+            <div className="space-y-1 text-sm">
+              {achievements.length ? achievements.map((goal) => <p key={goal.id} className="flex items-center gap-2 text-success"><Award className="h-4 w-4" />{goal.title}</p>) : <p className="text-muted-foreground">No completed goals yet.</p>}
+            </div>
+          </div>
         </SectionContainer>
+
         <SectionContainer title="Goal timeline">
-          <LifeTimeline items={[{ year: 'Q1', title: 'Set focus', detail: 'Defined three guiding priorities.' }, { year: 'Q2', title: 'Execution', detail: 'Built consistent weekly cadence.' }, { year: 'Q3', title: 'Refinement', detail: 'Removing goals that no longer align.' }]} />
+          <LifeTimeline items={[{ year: 'Week 1', title: 'Intention set', detail: 'Selected goals that align with identity, not urgency.' }, { year: 'Week 2', title: 'Milestones defined', detail: 'Broke goals into actionable checkpoints.' }, { year: 'Week 3', title: 'Execution rhythm', detail: 'Focused on consistent weekly review.' }]} />
         </SectionContainer>
       </div>
+
+      <SectionContainer title="Goal progress graph">
+        <ResponsiveContainer width="100%" height={230}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Line type="monotone" dataKey="progress" stroke="#C5005E" strokeWidth={2} />
+          </LineChart>
+        </ResponsiveContainer>
+      </SectionContainer>
 
       <SectionContainer title="Active goals">
         <div className="grid gap-4 md:grid-cols-2">
           {goals.map((goal) => (
-            <div key={goal.id}>
-              <GoalCard title={goal.title} category={goal.category} progress={goal.progress} />
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => bump(goal.id)} className="rounded-md border px-2 py-1 text-xs">Update +10%</button>
-                <button onClick={() => remove(goal.id)} className="rounded-md border border-destructive/30 px-2 py-1 text-xs text-destructive">Delete</button>
+            <div key={goal.id} className="rounded-xl border p-4">
+              <GoalCard title={goal.title} category={goal.category} progress={progressOf(goal)} />
+              <div className="mt-3 space-y-2">
+                {goal.milestones.map((milestone) => (
+                  <label key={milestone.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={milestone.done} onChange={() => toggleMilestone(goal.id, milestone.id)} />
+                    <span className={milestone.done ? 'line-through text-muted-foreground' : ''}>{milestone.text}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button className="rounded-md border px-2 py-1 text-xs" onClick={() => addMilestone(goal.id)}><Check className="mr-1 inline h-3 w-3" />Add milestone</button>
+                <button className="rounded-md border px-2 py-1 text-xs" onClick={() => editTitle(goal.id)}><Pencil className="mr-1 inline h-3 w-3" />Edit</button>
+                <button className="rounded-md border border-destructive/30 px-2 py-1 text-xs text-destructive" onClick={() => deleteGoal(goal.id)}><Trash2 className="mr-1 inline h-3 w-3" />Delete</button>
               </div>
             </div>
           ))}
