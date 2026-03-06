@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { BarChart3, BookOpen, Brain, Camera, Clock, Eye, LayoutDashboard, Settings, Target, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Brain, CalendarDays, Camera, Clock, Eye, LayoutDashboard, Settings, Target, Users } from 'lucide-react';
 import { Navbar, PageTransition, Sidebar } from '@/components/LayoutComponents';
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/connections', icon: Users, label: 'Connections' },
   { to: '/daily-photo', icon: Camera, label: 'Daily Photo' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/planner', icon: CalendarDays, label: 'Planner' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 

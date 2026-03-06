@@ -201,11 +201,12 @@ export default function Dashboard() {
         />
       </motion.div>
 
-      <motion.div variants={animations.item} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <motion.div variants={animations.item} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Link to="/journal"><button className="w-full rounded-xl border p-4 text-left transition hover:-translate-y-1 hover:bg-muted">Dashboard → Journal</button></Link>
         <Link to="/goals"><button className="w-full rounded-xl border p-4 text-left transition hover:-translate-y-1 hover:bg-muted">Dashboard → Goals</button></Link>
         <Link to="/ai"><button className="w-full rounded-xl border p-4 text-left transition hover:-translate-y-1 hover:bg-muted">Dashboard → AI Companion</button></Link>
         <Link to="/life-capsule"><button className="w-full rounded-xl border p-4 text-left transition hover:-translate-y-1 hover:bg-muted">Dashboard → Memories</button></Link>
+        <Link to="/planner"><button className="w-full rounded-xl border p-4 text-left transition hover:-translate-y-1 hover:bg-muted">Dashboard → Planner</button></Link>
       </motion.div>
     </motion.div>
   );

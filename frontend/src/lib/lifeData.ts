@@ -14,6 +14,18 @@ export interface GoalItemData {
   milestones: { id: string; text: string; done: boolean }[];
 }
 
+
+export interface PlannerTaskData {
+  id: string;
+  title: string;
+  note?: string;
+  dateKey: string;
+  startHour: number;
+  durationHours: number;
+  type: 'meeting' | 'focus' | 'personal' | 'task';
+  done?: boolean;
+}
+
 export interface MemoryEntryData {
   id: string;
   title: string;
@@ -27,6 +39,7 @@ const KEYS = {
   journal: 'lifeos_journal_entries',
   goals: 'lifeos_goals',
   memories: 'lifeos_memories',
+  planner: 'lifeos_planner_tasks',
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -51,4 +64,6 @@ export const lifeData = {
   setGoals: (items: GoalItemData[]) => write(KEYS.goals, items),
   getMemories: () => read<MemoryEntryData[]>(KEYS.memories, []),
   setMemories: (items: MemoryEntryData[]) => write(KEYS.memories, items),
+  getPlannerTasks: () => read<PlannerTaskData[]>(KEYS.planner, []),
+  setPlannerTasks: (items: PlannerTaskData[]) => write(KEYS.planner, items),
 };
