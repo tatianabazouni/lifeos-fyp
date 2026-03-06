@@ -1,0 +1,252 @@
+/* ==========================================================
+   1️⃣ Google Fonts Import (must be at the very top)
+========================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+/* ==========================================================
+   2️⃣ Tailwind Directives
+========================================================== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================
+   3️⃣ Base Layer (CSS Variables + Global Styles)
+========================================================== */
+@layer base {
+  :root {
+    --background: 40 30% 97%;
+    --foreground: 200 25% 10%;
+
+    --card: 40 25% 99%;
+    --card-foreground: 200 25% 10%;
+
+    --popover: 40 25% 99%;
+    --popover-foreground: 200 25% 10%;
+
+    --primary: 170 55% 30%;
+    --primary-foreground: 40 30% 97%;
+
+    --secondary: 40 40% 93%;
+    --secondary-foreground: 200 25% 15%;
+
+    --muted: 40 20% 94%;
+    --muted-foreground: 200 10% 45%;
+
+    --accent: 35 90% 55%;
+    --accent-foreground: 200 25% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 40 30% 97%;
+
+    --border: 40 20% 90%;
+    --input: 40 20% 90%;
+    --ring: 170 55% 30%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 200 20% 8%;
+    --sidebar-foreground: 40 15% 85%;
+    --sidebar-primary: 170 55% 45%;
+    --sidebar-primary-foreground: 40 30% 97%;
+    --sidebar-accent: 200 15% 14%;
+    --sidebar-accent-foreground: 40 15% 90%;
+    --sidebar-border: 200 15% 16%;
+    --sidebar-ring: 170 55% 45%;
+
+    --success: 145 60% 40%;
+    --success-foreground: 40 30% 97%;
+    --warning: 35 90% 55%;
+    --warning-foreground: 200 25% 10%;
+    --info: 200 80% 50%;
+    --info-foreground: 40 30% 97%;
+
+    --xp: 170 55% 45%;
+    --streak: 35 90% 55%;
+    --level: 260 60% 55%;
+
+    --gradient-hero: linear-gradient(135deg, hsl(170, 55%, 30%), hsl(200, 60%, 25%));
+    --gradient-warm: linear-gradient(135deg, hsl(35, 90%, 55%), hsl(20, 85%, 55%));
+    --gradient-calm: linear-gradient(135deg, hsl(170, 55%, 30%), hsl(145, 60%, 40%));
+    --gradient-sidebar: linear-gradient(180deg, hsl(200, 20%, 8%), hsl(200, 25%, 5%));
+
+    --shadow-sm: 0 1px 2px hsl(200 25% 10% / 0.04);
+    --shadow-md: 0 4px 12px hsl(200 25% 10% / 0.06);
+    --shadow-lg: 0 8px 30px hsl(200 25% 10% / 0.08);
+    --shadow-glow: 0 0 20px hsl(170 55% 30% / 0.15);
+  }
+
+  /* Dark mode variables */
+  .dark {
+    --background: 200 20% 8%;
+    --foreground: 40 15% 90%;
+    --card: 200 18% 11%;
+    --card-foreground: 40 15% 90%;
+    --popover: 200 18% 11%;
+    --popover-foreground: 40 15% 90%;
+    --primary: 170 55% 45%;
+    --primary-foreground: 200 25% 5%;
+    --secondary: 200 15% 16%;
+    --secondary-foreground: 40 15% 85%;
+    --muted: 200 15% 14%;
+    --muted-foreground: 200 10% 55%;
+    --accent: 35 90% 55%;
+    --accent-foreground: 200 25% 5%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 40 30% 97%;
+    --border: 200 15% 18%;
+    --input: 200 15% 18%;
+    --ring: 170 55% 45%;
+  }
+
+  /* Global resets */
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+/* ==========================================================
+   4️⃣ Component Layer
+========================================================== */
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border rounded-xl;
+    box-shadow: var(--shadow-md);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .gradient-warm {
+    background: var(--gradient-warm);
+  }
+
+  .gradient-calm {
+    background: var(--gradient-calm);
+  }
+
+  .xp-bar {
+    @apply h-3 rounded-full overflow-hidden;
+    background: hsl(var(--muted));
+  }
+
+  .xp-bar-fill {
+    @apply h-full rounded-full transition-all duration-700 ease-out;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--xp)));
+  }
+
+  .streak-badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold;
+    background: linear-gradient(135deg, hsl(var(--streak) / 0.15), hsl(var(--streak) / 0.05));
+    color: hsl(var(--streak));
+    border: 1px solid hsl(var(--streak) / 0.2);
+  }
+
+  .level-badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold;
+    background: linear-gradient(135deg, hsl(var(--level) / 0.15), hsl(var(--level) / 0.05));
+    color: hsl(var(--level));
+    border: 1px solid hsl(var(--level) / 0.2);
+  }
+
+  .mood-chip {
+    @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200;
+    @apply border border-border hover:border-primary/30 hover:bg-primary/5;
+  }
+
+  .mood-chip.active {
+    @apply bg-primary/10 border-primary/40 text-primary font-medium;
+  }
+
+  .page-header {
+    @apply mb-8;
+  }
+
+  .page-title {
+    @apply text-3xl font-bold tracking-tight;
+    font-family: 'Playfair Display', serif;
+  }
+
+  .page-subtitle {
+    @apply text-muted-foreground mt-1;
+  }
+
+  .stat-card {
+    @apply glass-card p-5 flex flex-col gap-2;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold;
+  }
+
+  .stat-label {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .chat-bubble {
+    @apply max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed;
+  }
+
+  .chat-bubble-user {
+    @apply chat-bubble ml-auto text-primary-foreground;
+    background: var(--gradient-hero);
+    border-bottom-right-radius: 4px;
+  }
+
+  .chat-bubble-ai {
+    @apply chat-bubble bg-muted;
+    border-bottom-left-radius: 4px;
+  }
+
+  .timeline-line {
+    @apply absolute left-5 top-0 bottom-0 w-0.5;
+    background: linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--primary) / 0.1));
+  }
+
+  .masonry-grid {
+    columns: 2;
+    column-gap: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .masonry-grid {
+      columns: 3;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .masonry-grid {
+      columns: 4;
+    }
+  }
+
+  .masonry-item {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+}
+
+/* ==========================================================
+   5️⃣ Utilities Layer
+========================================================== */
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-hero);
+  }
+
+  .text-gradient-warm {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-warm);
+  }
+}
