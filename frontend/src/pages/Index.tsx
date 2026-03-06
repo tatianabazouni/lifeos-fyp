@@ -1,145 +1,73 @@
-import { Link } from "react-router-dom"; 
-import { motion } from "framer-motion";
-import { Sparkles, BookOpen, Target, Clock, Brain, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import heroBg from "@/assets/hero-bg.jpg";
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowRight, Brain, Heart, Sparkles, Target, Workflow } from 'lucide-react';
+import { PrimaryButton, SecondaryButton } from '@/components/AppButtons';
+
+const sectionAnimation = { initial: { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.25 }, transition: { duration: 0.6 } };
 
 const features = [
-  {
-    icon: BookOpen,
-    title: "Journal & Reflect",
-    description: "Capture daily thoughts, tag moods, and discover patterns in your inner life.",
-  },
-  {
-    icon: Target,
-    title: "Goals & Vision",
-    description: "Set meaningful goals, break them into steps, and track your progress visually.",
-  },
-  {
-    icon: Clock,
-    title: "Life Timeline",
-    description: "Document life events in chapters—childhood, career, faith—and see your story unfold.",
-  },
-  {
-    icon: Brain,
-    title: "AI Insights",
-    description: "Get AI-powered summaries, goal decomposition, and personalized motivational guidance.",
-  },
+  { icon: Brain, title: 'AI Reflection', body: 'Emotionally intelligent prompts and insights based on your own writing.' },
+  { icon: Target, title: 'Meaningful Goals', body: 'Track growth with milestones, progress visuals, and evolving priorities.' },
+  { icon: Heart, title: 'Memory Archive', body: 'Capture moments as a timeline so your life feels coherent over time.' },
+  { icon: Workflow, title: 'Life Narrative', body: 'From onboarding to dashboard, every flow reinforces your personal story.' },
 ];
 
-const Index = () => {
+export default function Index() {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <span className="font-serif text-xl font-bold text-foreground">LifeOS</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link to="/dashboard">
-              <Button variant="ghost" size="sm">Log In</Button>
-            </Link>
-            <Link to="/dashboard">
-              <Button size="sm">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#43001f,transparent_40%),#0b0608] text-white">
+      <header className="mx-auto flex max-w-6xl items-center justify-between p-6">
+        <div className="flex items-center gap-2 font-serif text-xl"><Sparkles className="h-5 w-5 text-[#FFD150]" />LifeOS</div>
+        <div className="flex gap-3"><Link to="/login"><SecondaryButton>Login</SecondaryButton></Link><Link to="/register"><PrimaryButton>Start free</PrimaryButton></Link></div>
+      </header>
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <img src={heroBg} alt="Hero Background" className="w-full h-full object-cover" />
-        </div>
-        <div className="relative max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="font-serif text-5xl md:text-7xl font-bold text-foreground leading-tight mb-6">
-              Your Life Story, <span className="text-gradient">Beautifully Captured</span>
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              LifeOS helps you journal, set goals, and document your journey—with AI-powered insights to guide your personal growth.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/dashboard">
-                <Button size="lg" className="text-base px-8 py-6 gap-2">
-                  Start Your Journey <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/timeline">
-                <Button variant="outline" size="lg" className="text-base px-8 py-6">
-                  Explore Demo
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      <main className="mx-auto max-w-6xl space-y-24 px-6 pb-24 pt-12">
+        <motion.section initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+          <h1 className="mx-auto max-w-5xl text-5xl font-semibold leading-tight md:text-7xl">Navigate your life story, not just your to-do list.</h1>
+          <p className="mx-auto mt-6 max-w-2xl text-white/70">LifeOS is an AI-assisted digital companion for reflection, memory, and intentional personal growth.</p>
+          <div className="mt-8 flex justify-center gap-3"><Link to="/register"><PrimaryButton>Begin your chapter <ArrowRight className="ml-1 h-4 w-4" /></PrimaryButton></Link><Link to="/login"><SecondaryButton>Explore product</SecondaryButton></Link></div>
+        </motion.section>
 
-      {/* Features */}
-      <section className="py-20 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="font-serif text-3xl md:text-4xl font-bold text-center text-foreground mb-4">
-            Everything You Need to Grow
-          </h2>
-          <p className="text-center text-muted-foreground mb-16 max-w-xl mx-auto">
-            A thoughtful toolkit for intentional living and personal documentation.
-          </p>
-          <div className="grid md:grid-cols-2 gap-8">
-            {features.map((feature, i) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1, duration: 0.5 }}
-                viewport={{ once: true }}
-                className="bg-card rounded-xl p-8 card-elevated border border-border"
-              >
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <feature.icon className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-serif text-xl font-semibold text-foreground mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-              </motion.div>
+        <motion.section {...sectionAnimation}>
+          <h2 className="mb-2 text-3xl font-semibold">Problem</h2>
+          <p className="max-w-3xl text-white/70">Most tools optimize output. Very few help humans process emotion, preserve meaning, and make thoughtful decisions from self-awareness.</p>
+        </motion.section>
+
+        <motion.section {...sectionAnimation}>
+          <h2 className="mb-2 text-3xl font-semibold">Solution</h2>
+          <p className="max-w-3xl text-white/70">LifeOS combines journaling, goals, AI coaching, and memory timelines into one calm immersive product where your growth is visible and emotionally coherent.</p>
+        </motion.section>
+
+        <motion.section {...sectionAnimation}>
+          <h2 className="mb-6 text-3xl font-semibold">Features</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {features.map((feature) => (
+              <motion.article key={feature.title} whileHover={{ y: -4 }} className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                <feature.icon className="mb-4 h-5 w-5 text-[#FF9760]" />
+                <h3 className="mb-2 text-xl font-semibold">{feature.title}</h3>
+                <p className="text-sm text-white/70">{feature.body}</p>
+              </motion.article>
             ))}
           </div>
-        </div>
-      </section>
+        </motion.section>
 
-      {/* CTA */}
-      <section className="py-20 px-6">
-        <div className="max-w-3xl mx-auto text-center bg-card rounded-2xl p-12 card-elevated border border-border">
-          <h2 className="font-serif text-3xl font-bold text-foreground mb-4">
-            Begin Your LifeOS Today
-          </h2>
-          <p className="text-muted-foreground mb-8">
-            Your story matters. Start documenting it with intention.
-          </p>
-          <Link to="/dashboard">
-            <Button size="lg" className="text-base px-8 py-6 gap-2">
-              Get Started Free <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-8 px-6 border-t border-border">
-        <div className="max-w-6xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="font-serif font-semibold text-foreground">LifeOS</span>
+        <motion.section {...sectionAnimation}>
+          <h2 className="mb-6 text-3xl font-semibold">How it works</h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            {['Sign up and onboard your current season', 'Reflect daily with journal + AI prompts', 'Track growth across goals, memories, and analytics'].map((step, index) => (
+              <div key={step} className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <p className="mb-2 text-xs text-[#FFD150]">STEP {index + 1}</p>
+                <p className="text-sm text-white/80">{step}</p>
+              </div>
+            ))}
           </div>
-          <p>© 2026 LifeOS. All rights reserved.</p>
-        </div>
-      </footer>
+        </motion.section>
+
+        <motion.section {...sectionAnimation} className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center backdrop-blur">
+          <h2 className="text-3xl font-semibold">Start your next chapter with clarity</h2>
+          <p className="mx-auto mt-3 max-w-xl text-white/70">From signup to dashboard, LifeOS helps you feel the continuity of your own story.</p>
+          <Link to="/register"><PrimaryButton className="mt-6">Create your account</PrimaryButton></Link>
+        </motion.section>
+      </main>
     </div>
   );
-};
-
-export default Index;
+}

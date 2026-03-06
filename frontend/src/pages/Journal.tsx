@@ -1,195 +1,207 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import api from '@/services/api';
-import { LoadingSpinner, EmptyState, ErrorState } from '@/components/StateHelpers';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Bold, BookOpenText, Italic, List, Plus, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Plus, BookOpen, Trash2, Edit3, Sparkles, Loader2, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
+import { EmotionTag, ReflectionPrompt } from '@/components/InteractiveComponents';
+import { JournalCard } from '@/components/ContentCards';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PrimaryButton } from '@/components/AppButtons';
+import { lifeData, type JournalEntryData, type JournalNotebookData } from '@/lib/lifeData';
 
-interface JournalEntry {
-  id: string;
-  title: string;
-  content: string;
-  mood: string;
-  tags: string[];
-  date: string;
+const prompts = [
+  'What did today teach me about my triggers?',
+  'Where did I choose alignment over approval?',
+  'What one truth do I need to hear from myself tonight?',
+];
+const moods = ['Calm', 'Hopeful', 'Anxious', 'Grateful', 'Heavy', 'Focused'];
+
+const draftKey = (notebookId: string) => `journal_rich_draft_${notebookId}`;
+
+function buildDefaultNotebook(entries: JournalEntryData[]): JournalNotebookData {
+  return {
+    id: 'default-notebook',
+    title: 'My Diary',
+    description: 'Your primary personal notebook.',
+    createdAt: new Date().toISOString(),
+    entries,
+  };
 }
 
-const moods = [
-  '😊 Happy',
-  '😌 Calm',
-  '😢 Sad',
-  '😤 Frustrated',
-  '🤔 Reflective',
-  '🔥 Motivated',
-  '😴 Tired',
-  '🥰 Grateful'
-];
+function loadNotebooks(): JournalNotebookData[] {
+  const notebooks = lifeData.getJournalNotebooks();
+  if (notebooks.length) return notebooks;
+
+  const legacyEntries = lifeData.getJournalEntries();
+  const seeded = [buildDefaultNotebook(legacyEntries)];
+  lifeData.setJournalNotebooks(seeded);
+  lifeData.setJournalEntries(legacyEntries);
+  return seeded;
+}
 
 export default function Journal() {
-  const { user } = useAuth(); // ✅ FIX ADDED
-
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<JournalEntry | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [mood, setMood] = useState('');
+  const [emotion, setEmotion] = useState('Calm');
+  const [notebooks, setNotebooks] = useState<JournalNotebookData[]>(() => loadNotebooks());
+  const [activeNotebookId, setActiveNotebookId] = useState<string>('');
+  const [newNotebookTitle, setNewNotebookTitle] = useState('');
+  const [search, setSearch] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  const fetchEntries = async () => {
-    if (!user) return; // ✅ now valid
-
-    setLoading(true);
-    try {
-      const res = await api.get<JournalEntry[]>('/journal');
-      setEntries(
-        res.data.map((entry: any) => ({
-          ...entry,
-          id: entry._id || entry.id
-        }))
-      );
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const activeNotebook = useMemo(() => notebooks.find((book) => book.id === activeNotebookId) ?? notebooks[0], [notebooks, activeNotebookId]);
+  const entries = activeNotebook?.entries ?? [];
 
   useEffect(() => {
-    if (user) {
-      fetchEntries();
-    }
-  }, [user]); // ✅ depend on user
+    if (!activeNotebookId && notebooks[0]) setActiveNotebookId(notebooks[0].id);
+  }, [activeNotebookId, notebooks]);
 
-  const resetForm = () => {
+  const content = editorRef.current?.innerText ?? '';
+  const words = useMemo(() => content.trim().split(/\s+/).filter(Boolean).length, [content]);
+
+  const persistNotebooks = (next: JournalNotebookData[]) => {
+    setNotebooks(next);
+    lifeData.setJournalNotebooks(next);
+    lifeData.setJournalEntries(next.flatMap((book) => book.entries));
+  };
+
+  const apply = (command: 'bold' | 'italic' | 'insertUnorderedList') => {
+    document.execCommand(command);
+    editorRef.current?.focus();
+  };
+
+  const saveEntry = () => {
+    if (!title || !content.trim() || !activeNotebook) return;
+    const entry: JournalEntryData = {
+      id: crypto.randomUUID(),
+      title,
+      content: content.trim(),
+      mood: emotion,
+      tags,
+      date: new Date().toLocaleDateString(),
+      notebookId: activeNotebook.id,
+    };
+
+    persistNotebooks(
+      notebooks.map((book) => (book.id === activeNotebook.id ? { ...book, entries: [entry, ...book.entries] } : book)),
+    );
+
     setTitle('');
-    setContent('');
-    setMood('');
     setTags([]);
-    setTagInput('');
-    setEditing(null);
+    if (editorRef.current) editorRef.current.innerHTML = '';
+    localStorage.removeItem(draftKey(activeNotebook.id));
   };
 
-  const openCreate = () => {
-    resetForm();
-    setDialogOpen(true);
+  const autosave = () => {
+    if (!editorRef.current || !activeNotebook) return;
+    localStorage.setItem(draftKey(activeNotebook.id), editorRef.current.innerHTML);
   };
 
-  const openEdit = (entry: JournalEntry) => {
-    setEditing(entry);
-    setTitle(entry.title);
-    setContent(entry.content);
-    setMood(entry.mood);
-    setTags(entry.tags);
-    setDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!title || !content) return;
-
-    setSaving(true);
-    try {
-      if (editing) {
-        await api.put(`/journal/${editing.id}`, { title, content, mood, tags });
-      } else {
-        await api.post('/journal', { title, content, mood, tags });
-      }
-
-      setDialogOpen(false);
-      resetForm();
-      fetchEntries();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await api.delete(`/journal/${id}`);
-    fetchEntries();
-  };
-
-  const getAiFeedback = async () => {
-    if (!content) return;
-
-    setAiLoading(true);
-    try {
-      const res = await api.post<{ feedback: string }>(
-        '/ai/journal-feedback',
-        { content }
-      );
-
-      setContent(prev =>
-        prev + '\n\n--- AI Feedback ---\n' + res.data.feedback
-      );
-    } finally {
-      setAiLoading(false);
-    }
+  const loadDraft = () => {
+    if (!editorRef.current || !activeNotebook) return;
+    const draft = localStorage.getItem(draftKey(activeNotebook.id));
+    if (draft) editorRef.current.innerHTML = draft;
   };
 
   const addTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
-    }
+    if (!tagInput.trim() || tags.includes(tagInput.trim())) return;
+    setTags((prev) => [...prev, tagInput.trim()]);
+    setTagInput('');
   };
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorState message={error} onRetry={fetchEntries} />;
+  const createNotebook = () => {
+    if (!newNotebookTitle.trim()) return;
+    const notebook: JournalNotebookData = {
+      id: crypto.randomUUID(),
+      title: newNotebookTitle.trim(),
+      description: 'Personal notebook',
+      createdAt: new Date().toISOString(),
+      entries: [],
+    };
+    const next = [notebook, ...notebooks];
+    persistNotebooks(next);
+    setActiveNotebookId(notebook.id);
+    setNewNotebookTitle('');
+    setTitle('');
+    setTags([]);
+    if (editorRef.current) editorRef.current.innerHTML = '';
+  };
+
+  const switchNotebook = (id: string) => {
+    setActiveNotebookId(id);
+    setTitle('');
+    setTags([]);
+    if (editorRef.current) editorRef.current.innerHTML = '';
+  };
+
+  const filtered = entries.filter((entry) => `${entry.title} ${entry.content} ${entry.mood} ${entry.tags.join(' ')}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div>
-      <div className="flex items-center justify-between page-header">
-        <div>
-          <h1 className="page-title">Journal</h1>
-          <p className="page-subtitle">Document your thoughts and reflections</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Entry
-        </Button>
-      </div>
+    <div className="space-y-6" onMouseEnter={loadDraft}>
+      <PageHeader title="Journal Notebooks" subtitle="Create notebooks for diaries and keep multiple titled entries inside each notebook." />
+      <div className="grid gap-6 lg:grid-cols-4">
+        <SectionContainer title="Notebooks" description="Switch between personal diaries and journals.">
+          <div className="space-y-2">
+            {notebooks.map((notebook) => (
+              <button key={notebook.id} onClick={() => switchNotebook(notebook.id)} className={`w-full rounded-xl border p-3 text-left transition ${activeNotebookId === notebook.id ? 'border-primary bg-primary/10' : 'hover:bg-muted'}`}>
+                <div className="flex items-center gap-2">
+                  <BookOpenText className="h-4 w-4 text-primary" />
+                  <p className="font-medium">{notebook.title}</p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{notebook.entries.length} entries</p>
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Input value={newNotebookTitle} onChange={(event) => setNewNotebookTitle(event.target.value)} placeholder="New notebook title" />
+            <PrimaryButton onClick={createNotebook} variant="secondary"><Plus className="h-4 w-4" /></PrimaryButton>
+          </div>
+        </SectionContainer>
 
-      {entries.length === 0 ? (
-        <EmptyState
-          icon={<BookOpen className="h-8 w-8 text-muted-foreground" />}
-          title="No journal entries yet"
-          description="Start writing your first entry to begin your reflection journey"
-          action={
-            <Button onClick={openCreate} variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Write Entry
-            </Button>
-          }
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {entries.map((entry, i) => (
-            <motion.div
-              key={entry.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="glass-card p-5 group"
-            >
-              <h3 className="font-semibold">{entry.title}</h3>
-              <p className="text-xs text-muted-foreground">{entry.date}</p>
-              <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
-                {entry.content}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      )}
+        <SectionContainer title={`Write in ${activeNotebook?.title ?? 'Notebook'}`} description="Create titled entries inside this notebook.">
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Entry title" className="mb-3" />
+          <div className="mb-2 flex gap-2">
+            <button aria-label="Bold" onClick={() => apply('bold')} className="rounded-md border p-2 hover:bg-muted"><Bold className="h-4 w-4" /></button>
+            <button aria-label="Italic" onClick={() => apply('italic')} className="rounded-md border p-2 hover:bg-muted"><Italic className="h-4 w-4" /></button>
+            <button aria-label="List" onClick={() => apply('insertUnorderedList')} className="rounded-md border p-2 hover:bg-muted"><List className="h-4 w-4" /></button>
+          </div>
+          <div ref={editorRef} onInput={autosave} contentEditable suppressContentEditableWarning className="min-h-52 rounded-xl border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring" aria-label="Journal rich text editor" />
+          <div className="mt-3 flex flex-wrap gap-2">{moods.map((mood) => <EmotionTag key={mood} label={mood} active={emotion === mood} onClick={() => setEmotion(mood)} />)}</div>
+          <div className="mt-3 flex gap-2">
+            <Input value={tagInput} onChange={(event) => setTagInput(event.target.value)} placeholder="Add tag" />
+            <PrimaryButton variant="secondary" onClick={addTag}>Tag</PrimaryButton>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">{tags.map((tag) => <span key={tag} className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">#{tag}</span>)}</div>
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground"><span>{words} words</span><span>{entries.length} entries in this notebook</span></div>
+          <PrimaryButton className="mt-4" onClick={saveEntry}>Save entry</PrimaryButton>
+        </SectionContainer>
+
+        <SectionContainer title="AI reflection prompts" description="Gentle questions to deepen self-understanding.">
+          <div className="space-y-3">
+            {prompts.map((prompt) => (
+              <ReflectionPrompt key={prompt} prompt={prompt} onUse={() => {
+                if (!editorRef.current) return;
+                editorRef.current.innerHTML += `<p><strong>${prompt}</strong></p><p></p>`;
+                autosave();
+              }} />
+            ))}
+          </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
+            <p className="mb-1 flex items-center gap-2 font-medium text-primary"><Sparkles className="h-4 w-4" />AI insight</p>
+            <p className="text-foreground/80">Your writing becomes more detailed in travel/adventure themed notebooks. Consider a weekly review per notebook to spot emotional patterns by life context.</p>
+          </motion.div>
+        </SectionContainer>
+
+        <SectionContainer title={`${activeNotebook?.title ?? 'Notebook'} entries`} description="Search titled entries in the current notebook.">
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search notebook entries" className="mb-3" />
+          <div className="space-y-3">
+            {filtered.map((entry) => (
+              <JournalCard key={entry.id} title={entry.title} excerpt={entry.content} mood={`${entry.mood} ${entry.tags.map((tag) => `#${tag}`).join(' ')}`} date={entry.date} />
+            ))}
+            {filtered.length === 0 && <p className="text-sm text-muted-foreground">No matching entries in this notebook yet.</p>}
+          </div>
+        </SectionContainer>
+      </div>
     </div>
   );
 }
