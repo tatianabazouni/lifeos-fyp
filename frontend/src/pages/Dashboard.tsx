@@ -1,153 +1,50 @@
-import { useEffect, useState } from 'react';
+import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
+import { AIInsightCard, GoalCard, JournalCard, MemoryCard } from '@/components/ContentCards';
+import { ReflectionPrompt } from '@/components/InteractiveComponents';
 import { Link } from 'react-router-dom';
-import api from '@/services/api';
-import { useAuth } from '@/context/AuthContext';
-import { LoadingSpinner, ErrorState } from '@/components/StateHelpers';
-import { motion } from 'framer-motion';
-import {
-  BookOpen, Target, Camera, Brain, Flame, Trophy, Star,
-  TrendingUp, Plus, ChevronRight,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { PrimaryButton, SecondaryButton } from '@/components/AppButtons';
 
-interface DashboardData {
-  xp: number;
-  xpToNext: number;
-  level: number;
-  streak: number;
-  recentActivity: { id: string; type: string; title: string; date: string }[];
-}
-
-const quickActions = [
-  { label: 'Add Memory', icon: Star, to: '/life-capsule', color: 'bg-primary/10 text-primary' },
-  { label: 'Add Goal', icon: Target, to: '/goals', color: 'bg-success/10 text-success' },
-  { label: 'Add Journal', icon: BookOpen, to: '/journal', color: 'bg-info/10 text-info' },
-  { label: 'Daily Photo', icon: Camera, to: '/daily-photo', color: 'bg-warning/10 text-warning' },
+const recentJournals = [
+  { title: 'I finally slowed down', excerpt: 'Today felt quieter. I stopped trying to optimize everything and simply listened.', mood: 'Calm', date: 'Today' },
+  { title: 'Hard conversation with dad', excerpt: 'I noticed old fears return, but I held eye contact and stayed present.', mood: 'Reflective', date: 'Yesterday' },
 ];
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
-
 export default function Dashboard() {
-  const { user } = useAuth();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const fetchDashboard = () => {
-    setLoading(true);
-    api.get<DashboardData>('/dashboard')
-      .then((res) => setData(res.data))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchDashboard(); }, []);
-
-  if (loading) return <LoadingSpinner message="Loading your dashboard..." />;
-  if (error) return <ErrorState message={error} onRetry={fetchDashboard} />;
-
-  const xpPercent = data ? Math.round((data.xp / data.xpToNext) * 100) : 0;
-
   return (
-    <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
-      {/* Welcome */}
-      <motion.div variants={fadeUp}>
-        <h1 className="page-title">
-          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'},{' '}
-          {user?.name?.split(' ')[0] || 'there'} ✨
-        </h1>
-        <p className="page-subtitle">Here's your life at a glance</p>
-      </motion.div>
+    <div className="space-y-6">
+      <PageHeader title="Good evening, this is your life in motion" subtitle="A reflective view of your growth, memory, and direction." action={<Link to="/journal"><PrimaryButton>Write reflection</PrimaryButton></Link>} />
 
-      {/* Stats row */}
-      <motion.div variants={fadeUp} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="stat-card">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            <span className="stat-label">Level</span>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <SectionContainer title="Life Summary" description="A gentle snapshot of where you are.">
+          <div className="space-y-3 text-sm">
+            <p>Journaled <span className="font-semibold text-primary">4</span> days this week.</p>
+            <p>Completed <span className="font-semibold text-primary">2</span> milestones this month.</p>
+            <p>Captured <span className="font-semibold text-primary">12</span> meaningful memories this year.</p>
           </div>
-          <span className="stat-value">{data?.level || 1}</span>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-2">
-            <Star className="h-4 w-4 text-xp" />
-            <span className="stat-label">XP</span>
-          </div>
-          <span className="stat-value">{data?.xp || 0}</span>
-          <div className="xp-bar">
-            <div className="xp-bar-fill" style={{ width: `${xpPercent}%` }} />
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-streak" />
-            <span className="stat-label">Streak</span>
-          </div>
-          <span className="stat-value">{data?.streak || 0} days</span>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-level" />
-            <span className="stat-label">Badges</span>
-          </div>
-          <span className="stat-value">0</span>
-        </div>
-      </motion.div>
+        </SectionContainer>
+        <SectionContainer title="Daily Reflection Prompt">
+          <ReflectionPrompt prompt="What did you protect your energy from today, and what did it allow you to feel?" />
+        </SectionContainer>
+        <AIInsightCard title="AI Insight" content="Your recent writing suggests a shift from external validation toward inner steadiness. Consider setting one boundary this week that protects your future self." className="h-full" />
+      </div>
 
-      {/* Quick Actions */}
-      <motion.div variants={fadeUp}>
-        <h2 className="text-lg font-semibold mb-3 font-serif">Quick Actions</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {quickActions.map(({ label, icon: Icon, to, color }) => (
-            <Link key={to} to={to}>
-              <div className="glass-card p-4 hover:shadow-lg transition-all duration-200 group cursor-pointer">
-                <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <p className="text-sm font-medium">{label}</p>
-              </div>
-            </Link>
-          ))}
+      <SectionContainer title="Goal Progress Overview">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <GoalCard title="Strengthen emotional consistency" progress={62} category="Wellbeing" />
+          <GoalCard title="Ship MVP onboarding" progress={48} category="Startup" />
+          <GoalCard title="Rebuild family rhythm" progress={71} category="Relationships" />
         </div>
-      </motion.div>
+      </SectionContainer>
 
-      {/* Recent Activity */}
-      <motion.div variants={fadeUp}>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold font-serif">Recent Activity</h2>
-          <Link to="/analytics" className="text-xs text-primary hover:underline flex items-center gap-1">
-            View all <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
-        <div className="glass-card divide-y divide-border">
-          {data?.recentActivity?.length ? (
-            data.recentActivity.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 p-4">
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-sm">
-                  {item.type === 'journal' ? '📝' : item.type === 'goal' ? '🎯' : item.type === 'photo' ? '📷' : '⭐'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.date}</p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              <Brain className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              <p>No activity yet. Start by adding a journal entry or setting a goal!</p>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionContainer title="Recent Journal Entries">
+          <div className="space-y-3">{recentJournals.map((entry) => <JournalCard key={entry.title} {...entry} />)}</div>
+          <Link to="/journal"><SecondaryButton className="mt-4">Open journal timeline</SecondaryButton></Link>
+        </SectionContainer>
+        <SectionContainer title="Memory Highlight">
+          <MemoryCard title="First prototype demo" date="March 2, 2026" description="You presented LifeOS to 6 peers. You were nervous and still delivered with clarity." />
+        </SectionContainer>
+      </div>
+    </div>
   );
 }

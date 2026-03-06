@@ -1,25 +1,27 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as Sonner } from '@/components/ui/sonner';
 
-import { AuthProvider } from "@/context/AuthContext";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import MainLayout from "@/layouts/MainLayout";
+import { AuthProvider } from '@/context/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import MainLayout from '@/layouts/MainLayout';
 
-import Auth from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
-import AICompanion from "@/pages/AICompanion";
-import Journal from "@/pages/Journal";
-import LifeCapsule from "@/pages/LifeCapsule";
-import Goals from "@/pages/Goals";
-import VisionBoards from "@/pages/VisionBoards";
-import DailyPhoto from "@/pages/DailyPhoto";
-import Connections from "@/pages/Connections";
-import Analytics from "@/pages/Analytics";
-import Settings from "@/pages/Settings";
-import NotFound from "@/pages/NotFound";
+import Auth from '@/pages/Auth';
+import Dashboard from '@/pages/Dashboard';
+import AICompanion from '@/pages/AICompanion';
+import Journal from '@/pages/Journal';
+import LifeCapsule from '@/pages/LifeCapsule';
+import Goals from '@/pages/Goals';
+import VisionBoards from '@/pages/VisionBoards';
+import DailyPhoto from '@/pages/DailyPhoto';
+import Connections from '@/pages/Connections';
+import Analytics from '@/pages/Analytics';
+import Settings from '@/pages/Settings';
+import NotFound from '@/pages/NotFound';
+import Index from '@/pages/Index';
+import Onboarding from '@/pages/Onboarding';
 
 const queryClient = new QueryClient();
 
@@ -32,9 +34,10 @@ export default function App() {
         <BrowserRouter>
           <AuthProvider>
             <Routes>
+              <Route path="/" element={<Index />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/register" element={<Auth />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/onboarding" element={<Onboarding />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route element={<MainLayout />}>
@@ -48,11 +51,7 @@ export default function App() {
                   <Route path="/connections" element={<Connections />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/settings" element={<Settings />} />
-
-                  {/* Backward-compatible aliases */}
-                  <Route path="/vision" element={<Navigate to="/vision-boards" replace />} />
-                  <Route path="/vision-board" element={<Navigate to="/vision-boards" replace />} />
-                  <Route path="/daily" element={<Navigate to="/daily-photo" replace />} />
+                  <Route path="/home" element={<Navigate to="/dashboard" replace />} />
                 </Route>
               </Route>
 

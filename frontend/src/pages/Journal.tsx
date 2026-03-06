@@ -1,195 +1,67 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import api from '@/services/api';
-import { LoadingSpinner, EmptyState, ErrorState } from '@/components/StateHelpers';
-import { motion } from 'framer-motion';
-import { Plus, BookOpen, Trash2, Edit3, Sparkles, Loader2, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useMemo, useState } from 'react';
+import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
+import { EmotionTag, ReflectionPrompt } from '@/components/InteractiveComponents';
+import { JournalCard } from '@/components/ContentCards';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PrimaryButton } from '@/components/AppButtons';
 
-interface JournalEntry {
-  id: string;
-  title: string;
-  content: string;
-  mood: string;
-  tags: string[];
-  date: string;
-}
-
-const moods = [
-  '😊 Happy',
-  '😌 Calm',
-  '😢 Sad',
-  '😤 Frustrated',
-  '🤔 Reflective',
-  '🔥 Motivated',
-  '😴 Tired',
-  '🥰 Grateful'
+const prompts = [
+  'Where did I abandon myself today?',
+  'What did I do that my future self will thank me for?',
+  'Which emotion did I avoid naming?',
 ];
+const emotions = ['Calm', 'Hopeful', 'Anxious', 'Grateful', 'Heavy', 'Focused'];
 
 export default function Journal() {
-  const { user } = useAuth(); // ✅ FIX ADDED
-
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<JournalEntry | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [mood, setMood] = useState('');
-  const [tagInput, setTagInput] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
+  const [content, setContent] = useState(localStorage.getItem('draft_journal') ?? '');
+  const [emotion, setEmotion] = useState('Reflective');
+  const [search, setSearch] = useState('');
+  const [entries, setEntries] = useState<{ title: string; content: string; mood: string; date: string }[]>([]);
 
-  const fetchEntries = async () => {
-    if (!user) return; // ✅ now valid
+  const words = useMemo(() => content.trim().split(/\s+/).filter(Boolean).length, [content]);
 
-    setLoading(true);
-    try {
-      const res = await api.get<JournalEntry[]>('/journal');
-      setEntries(
-        res.data.map((entry: any) => ({
-          ...entry,
-          id: entry._id || entry.id
-        }))
-      );
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchEntries();
-    }
-  }, [user]); // ✅ depend on user
-
-  const resetForm = () => {
+  const saveEntry = () => {
+    if (!title || !content) return;
+    setEntries((prev) => [{ title, content, mood: emotion, date: new Date().toLocaleDateString() }, ...prev]);
     setTitle('');
     setContent('');
-    setMood('');
-    setTags([]);
-    setTagInput('');
-    setEditing(null);
+    localStorage.removeItem('draft_journal');
   };
 
-  const openCreate = () => {
-    resetForm();
-    setDialogOpen(true);
-  };
-
-  const openEdit = (entry: JournalEntry) => {
-    setEditing(entry);
-    setTitle(entry.title);
-    setContent(entry.content);
-    setMood(entry.mood);
-    setTags(entry.tags);
-    setDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!title || !content) return;
-
-    setSaving(true);
-    try {
-      if (editing) {
-        await api.put(`/journal/${editing.id}`, { title, content, mood, tags });
-      } else {
-        await api.post('/journal', { title, content, mood, tags });
-      }
-
-      setDialogOpen(false);
-      resetForm();
-      fetchEntries();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await api.delete(`/journal/${id}`);
-    fetchEntries();
-  };
-
-  const getAiFeedback = async () => {
-    if (!content) return;
-
-    setAiLoading(true);
-    try {
-      const res = await api.post<{ feedback: string }>(
-        '/ai/journal-feedback',
-        { content }
-      );
-
-      setContent(prev =>
-        prev + '\n\n--- AI Feedback ---\n' + res.data.feedback
-      );
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const addTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
-    }
-  };
-
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorState message={error} onRetry={fetchEntries} />;
+  const filtered = entries.filter((entry) => `${entry.title} ${entry.content} ${entry.mood}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div>
-      <div className="flex items-center justify-between page-header">
-        <div>
-          <h1 className="page-title">Journal</h1>
-          <p className="page-subtitle">Document your thoughts and reflections</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Entry
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader title="Journal" subtitle="A private room for honest reflection, with gentle structure and emotional awareness." />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <SectionContainer title="Write" description="Autosaves while you think.">
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Entry title" className="mb-3" />
+          <Textarea
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              localStorage.setItem('draft_journal', e.target.value);
+            }}
+            placeholder="Let the page hold what you cannot carry alone..."
+            className="min-h-56"
+          />
+          <div className="mt-3 flex flex-wrap gap-2">{emotions.map((item) => <EmotionTag key={item} label={item} active={emotion === item} onClick={() => setEmotion(item)} />)}</div>
+          <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground"><span>{words} words</span><span>Autosaved</span></div>
+          <PrimaryButton className="mt-4" onClick={saveEntry}>Save Entry</PrimaryButton>
+        </SectionContainer>
 
-      {entries.length === 0 ? (
-        <EmptyState
-          icon={<BookOpen className="h-8 w-8 text-muted-foreground" />}
-          title="No journal entries yet"
-          description="Start writing your first entry to begin your reflection journey"
-          action={
-            <Button onClick={openCreate} variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Write Entry
-            </Button>
-          }
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {entries.map((entry, i) => (
-            <motion.div
-              key={entry.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="glass-card p-5 group"
-            >
-              <h3 className="font-semibold">{entry.title}</h3>
-              <p className="text-xs text-muted-foreground">{entry.date}</p>
-              <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
-                {entry.content}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      )}
+        <SectionContainer title="Reflection prompts" description="When you feel blocked, begin here.">
+          <div className="space-y-3">{prompts.map((prompt) => <ReflectionPrompt key={prompt} prompt={prompt} onUse={() => setContent((prev) => `${prev}\n\n${prompt}\n`)} />)}</div>
+          <p className="mt-4 text-xs text-muted-foreground">Current streak: 5 days</p>
+        </SectionContainer>
+
+        <SectionContainer title="Timeline" description="Search entries by thought, mood, or tag.">
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search journal entries" className="mb-3" />
+          <div className="space-y-3">{filtered.map((entry) => <JournalCard key={`${entry.title}-${entry.date}`} title={entry.title} excerpt={entry.content} mood={entry.mood} date={entry.date} />)}</div>
+        </SectionContainer>
+      </div>
     </div>
   );
 }

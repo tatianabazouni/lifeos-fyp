@@ -1,124 +1,61 @@
-import { useState, useRef, useEffect } from 'react';
-import api from '@/services/api';
-import { motion } from 'framer-motion';
-import { Send, Brain, Target, Flame, ListChecks, Loader2, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useMemo, useState } from 'react';
+import { PageHeader, SectionContainer } from '@/components/LayoutComponents';
+import { AIInsightCard } from '@/components/ContentCards';
 import { Input } from '@/components/ui/input';
+import { PrimaryButton } from '@/components/AppButtons';
 
-interface Message {
-  id: string;
-  role: 'user' | 'ai';
-  content: string;
-}
+interface ChatMessage { role: 'user' | 'ai'; content: string }
 
-const modes = [
-  { key: 'chat', label: 'Chat', icon: Brain },
-  { key: 'goals', label: 'Goals', icon: Target },
-  { key: 'motivation', label: 'Motivation', icon: Flame },
-  { key: 'priorities', label: 'Priorities', icon: ListChecks },
+const suggestions = [
+  'Help me process today without overthinking.',
+  'Give me one reflective question based on my goals.',
+  'What pattern do you see in my recent moods?',
 ];
 
 export default function AICompanion() {
-  const [mode, setMode] = useState('chat');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([{ role: 'ai', content: 'I am here with you. What feels most present today?' }]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [typing, setTyping] = useState(false);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const history = useMemo(() => messages.slice(-6), [messages]);
 
-  const send = async () => {
-    if (!input.trim() || loading) return;
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input.trim() };
-    setMessages((prev) => [...prev, userMsg]);
+  const send = (prompt?: string) => {
+    const value = prompt ?? input;
+    if (!value) return;
+    setMessages((prev) => [...prev, { role: 'user', content: value }]);
     setInput('');
-    setLoading(true);
-
-    try {
-      const res = await api.post<{ message: string }>('/ai/chat', { message: userMsg.content, mode });
-      setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', content: res.data.message }]);
-    } catch {
-      setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', content: 'Sorry, I encountered an error. Please try again.' }]);
-    } finally {
-      setLoading(false);
-    }
+    setTyping(true);
+    setTimeout(() => {
+      setMessages((prev) => [...prev, { role: 'ai', content: `I hear you: "${value}". Consider naming the emotion, the need underneath it, and one small action before sleep.` }]);
+      setTyping(false);
+    }, 900);
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <div className="page-header">
-        <h1 className="page-title">AI Companion</h1>
-        <p className="page-subtitle">Your personal growth assistant</p>
-      </div>
-
-      {/* Mode tabs */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-        {modes.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setMode(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-              mode === key
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-4 opacity-60">
-            <div className="w-16 h-16 rounded-2xl gradient-hero flex items-center justify-center">
-              <Sparkles className="h-8 w-8 text-primary-foreground" />
-            </div>
-            <div>
-              <p className="font-medium">Start a conversation</p>
-              <p className="text-sm text-muted-foreground mt-1">Ask me anything about your goals, habits, or life</p>
-            </div>
+    <div className="space-y-6">
+      <PageHeader title="AI Companion" subtitle="A calm conversational layer for reflection, insight, and memory recall." />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <SectionContainer title="Conversation" description="Private, contextual, and emotionally aware.">
+          <div className="mb-3 max-h-96 space-y-2 overflow-auto pr-1">
+            {history.map((message, index) => (
+              <div key={`${message.role}-${index}`} className={message.role === 'user' ? 'ml-auto max-w-[85%] rounded-2xl bg-primary px-4 py-3 text-sm text-white' : 'max-w-[85%] rounded-2xl bg-muted px-4 py-3 text-sm'}>{message.content}</div>
+            ))}
+            {typing && <div className="max-w-[85%] rounded-2xl bg-muted px-4 py-3 text-sm">Typing…</div>}
           </div>
-        )}
-        {messages.map((msg) => (
-          <motion.div
-            key={msg.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}>
-              {msg.content}
-            </div>
-          </motion.div>
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="chat-bubble-ai flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Thinking...</span>
-            </div>
+          <div className="flex gap-2">
+            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Talk to your companion" />
+            <PrimaryButton onClick={() => send()}>Send</PrimaryButton>
           </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <div className="flex gap-2 pt-4 border-t border-border">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && send()}
-          placeholder="Type your message..."
-          className="flex-1"
-        />
-        <Button onClick={send} disabled={loading || !input.trim()} size="icon">
-          <Send className="h-4 w-4" />
-        </Button>
+        </SectionContainer>
+        <SectionContainer title="Suggestions">
+          <div className="space-y-2">{suggestions.map((suggestion) => <button key={suggestion} onClick={() => send(suggestion)} className="w-full rounded-lg border p-3 text-left text-sm hover:bg-muted">{suggestion}</button>)}</div>
+        </SectionContainer>
+        <SectionContainer title="AI insights">
+          <div className="space-y-3">
+            <AIInsightCard title="Pattern" content="Your strongest entries are written between 10pm and midnight, often after social interactions." />
+            <AIInsightCard title="Memory reference" content="Three times this month you connected calmness with morning walks. Want to turn this into a ritual?" />
+          </div>
+        </SectionContainer>
       </div>
     </div>
   );
